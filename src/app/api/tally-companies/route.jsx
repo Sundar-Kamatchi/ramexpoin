@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { parseStringPromise } from 'xml2js';
 
-const TALLY_API_URL = process.env.TALLY_API_URL || "http://localhost:9000";
+const TALLY_API_URL = process.env.TALLY_API_URL;
 
 export async function GET() {
   console.log('Tally API URL:', TALLY_API_URL); // Debug log
