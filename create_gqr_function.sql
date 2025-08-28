@@ -1,0 +1,60 @@
+-- Create the missing get_gqr_details_by_id function
+-- Run this in your Supabase SQL editor
+
+CREATE OR REPLACE FUNCTION get_gqr_details_by_id(p_gqr_id INTEGER)
+RETURNS TABLE (
+  id INTEGER,
+  created_at TIMESTAMPTZ,
+  total_value_received NUMERIC,
+  export_quality_weight NUMERIC,
+  podi_weight NUMERIC,
+  rot_weight NUMERIC,
+  doubles_weight NUMERIC,
+  sand_weight NUMERIC,
+  rate NUMERIC,
+  podi_rate NUMERIC,
+  damage_allowed_kgs_ton NUMERIC,
+  volatile_po_rate NUMERIC,
+  volatile_podi_rate NUMERIC,
+  volatile_wastage_kgs_per_ton NUMERIC,
+  gqr_status TEXT,
+  pre_gr_entry_id INTEGER,
+  vouchernumber TEXT,
+  net_wt NUMERIC,
+  supplier_name TEXT
+) 
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    gqr.id,
+    gqr.created_at,
+    gqr.total_value_received,
+    gqr.export_quality_weight,
+    gqr.podi_weight,
+    gqr.rot_weight,
+    gqr.doubles_weight,
+    gqr.sand_weight,
+    po.rate,
+    po.podi_rate,
+    po.damage_allowed_kgs_ton,
+    gqr.volatile_po_rate,
+    gqr.volatile_podi_rate,
+    gqr.volatile_wastage_kgs_per_ton,
+    gqr.gqr_status,
+    pre.id as pre_gr_entry_id,
+    pre.vouchernumber,
+    pre.net_wt,
+    s.name as supplier_name
+  FROM gqr_entry gqr
+  LEFT JOIN pre_gr_entry pre ON gqr.pre_gr_entry_id = pre.id
+  LEFT JOIN purchase_orders po ON pre.po_id = po.id
+  LEFT JOIN suppliers s ON po.supplier_id = s.id
+  WHERE gqr.id = p_gqr_id::INTEGER;
+END;
+$$;
+
+-- Grant execute permission to authenticated users
+GRANT EXECUTE ON FUNCTION get_gqr_details_by_id(INTEGER) TO authenticated; 

@@ -1,0 +1,140 @@
+{\rtf1\fbidis\ansi\ansicpg1252\deff0\nouicompat\deflang1033{\fonttbl{\f0\fnil\fcharset0 Calibri;}{\f1\fnil\fcharset1 Segoe UI Emoji;}{\f2\fnil\fcharset1 Cambria Math;}{\f3\fnil\fcharset1 Segoe UI Symbol;}}
+{\*\generator Riched20 10.0.22621}{\*\mmathPr\mmathFont2\mwrapIndent1440 }\viewkind4\uc1 
+\pard\sa200\sl276\slmult1\f0\fs22\lang9 Project Description\par
+Onion Export Management\par
+Onion can be categorized by its size 25mm, 27mm, 30mm like that.\par
+Client is exporting onion.\par
+He is procuring onion in various category based on his customer's requirement by placing purchase orders to this vendors (he may be farmer or agent)\par
+Vendor agrees to supply onions at a specfic rate for e.g 30mm onion 50Tonnes at the Rate Rs.9/ per kg.  He also agrees damages allowed percentage (e.g 10%) and assures 80% of the cargo meets the required spec. of onion category (here 30mm).\par
+1. PO\par
+Client releases purchase order with the vendor acceptance detail along with the approximate selling rate of 'Podi' Podi means very small size of onion mixed in the onion. (1st Card of our app)\par
+Since the client using tally prime, this po will have to transfer to tally through api.\par
+2.Pre GR\par
+Now vendor starts supply:   On cargo/lorry vehicle enters the client's godown, client first calls the PO for this vendor and picks the po detail and record the weight of goods by calculating Loaded weight of the vehicle minus the empty weight of vehicle. So he gets the net weight of onion (For e.g 12tons) . Client is storing this information along with GR No, date, weigh bridge name, vehicle number.\par
+After that client uses sieves with 3 layers for segregating the onion by its sizes.  Client ordered 30 mm, out of the received 12tons 9.5 tons only matches the ordered size. 2nd layer of sieve may contain 25mm to 28mm sizes (they called this as Gap Items)  which he can not export to the customer but he can hold it for some other customer who used order that sizes. 3rd layer of sieve is called 'podi' which he can sell at very cheap rate for e.g Rs.4/-.  Now the client not knowing exact weight. he simply stores the bags of Gap Item(s) and 'Podi'.\par
+On rough calculation, our client's admin can decide the input export qualtiy onion weight and approve this cargo by giving a note to his office for making advance payment (say 70% of onion received). Once the admin approves this pre-gr, users not allowed to manipulate anything in this particular pre-gr.\par
+3. GQR (Goods Quality Report):\par
+After the segregation completed,  workers started examining the received onion for quality, there they will find some rot and doubles(meaning not rot but with combination of 2 layer onion which the client can not export).  Sand, Setthai, Rot and doubles are all to be wasted only.\par
+After deducting these wastages, admin arrived the weight shortage. Actually vendor claims full weight of his supply but client can accept the net weight after the dedution and adding the received podi item rate,gap items value .  Based on this, client can conclude the net worrth of the onion. Already he knows the commited rate of his buyer. So client compares with his buyer's committed rate with received onion's cost, he will decide the balance payment to be given to vendor or debit note to be raised to the vendor.\par
+On final decision of this consignment, a receipt note entry with balance payment to be given to vendor or along with a debit note to be sent to tally.\par
+4. Reports & Analysis\par
+Complete report to be generated from PO to GQR with both estimation and actuals\par
+\line Google Gemini Replies\line Of course. The Goods Quality Report (GQR) is the crucial final step to determine the precise value of the received onions and settle the account with your vendor. It moves from the initial estimates of the Pre-GR to the final, verified numbers.\par
+\par
+Here's a breakdown of how to structure the GQR module.\par
+\par
+GQR Module Design and Workflow\par
+The GQR process begins after a consignment (a Pre-GR) has been fully segregated and is ready for a final quality inspection.\par
+\par
+1. GQR Initiation\par
+The user starts by creating a new GQR.\par
+\par
+They must select an approved Pre-GR number from a list.\par
+\par
+The system should automatically load all relevant information from the PO and the selected Pre-GR:\par
+\par
+PO Number, Vendor Details\par
+\par
+Vehicle No., GRN Date, Weighbridge details\par
+\par
+Total Net Weight (e.g., 12 tons) as recorded in the Pre-GR.\par
+\par
+Ordered Onion Size (e.g., 30mm) and PO Rate (e.g., \u8377?9/kg).\par
+\par
+Allowed Damage % (e.g., 10%).\par
+\par
+Estimated 'Podi' rate (e.g., \u8377?4/kg).\par
+\par
+2. Quality Assessment & Actual Weight Entry\par
+This is the main data entry screen for the GQR. Here, staff will input the final, measured weights after the detailed quality check is complete.\par
+\par
+Input Fields:\par
+\par
+Export Quality Onions:\par
+\par
+Final weight of the accepted, ordered size onions (e.g., final weight of 30mm onions).\par
+\par
+Wastage Breakdown:\par
+\par
+Weight of Rot\par
+\par
+Weight of Doubles\par
+\par
+Weight of Sand/Soil\par
+\par
+Weight of 'Setthai' (other un-usable material)\par
+\par
+Other Categories:\par
+\par
+Final, actual weight of Gap Items (e.g., 25-28mm onions). You may need a separate input for the sale price of these items if it wasn't pre-agreed.\par
+\par
+Final, actual weight of 'Podi'.\par
+\par
+System Validation:\par
+The system should perform a check in the background:\par
+Sum of all final weights (Export Quality + All Wastage + Gap Items + Podi) should be very close to the Total Net Weight from the Pre-GR. A significant difference should flag a warning to the user to re-check their entries.\par
+\par
+3. Financial Calculation & Settlement \f1\u9878?\u-497?\f0\par
+Once the actual weights are entered, the system automatically calculates the final value of the consignment.\par
+\par
+Step 1: Calculate the Total Value of Received Goods\par
+\par
+Value of Export Quality Onions: Final Weight of Ordered Size \'d7 PO Rate\par
+\par
+Value of Gap Items: Final Weight of Gap Items \'d7 Market Rate for Gap Items\par
+\par
+Value of Podi: Final Weight of Podi \'d7 'Podi' Rate\par
+\par
+Total\~Received\~Value=(Value \par
+Export\par
+\u8203?\par
+ )+(Value \par
+Gap\par
+\u8203?\par
+ )+(Value \par
+Podi\par
+\u8203?\par
+ )\par
+Step 2: Determine the Final Payable Amount\par
+\par
+This is the Total Received Value calculated above. This value represents the true worth of the goods supplied by the vendor after accounting for all categories.\par
+\par
+Step 3: Calculate the Final Settlement\par
+\par
+The system pulls the Advance Paid amount (e.g., 70%) that was recorded during the Pre-GR approval.\par
+\par
+The final balance is calculated:\par
+\par
+Balance\~Due=Total\~Received\~Value\f2\u8722?\f0 Advance\~Paid\par
+If Balance Due > 0, this is the final amount to be paid to the vendor.\par
+\par
+If Balance Due < 0, the vendor owes this amount back to the client. A Debit Note must be raised for this amount.\par
+\par
+4. GQR Approval and Tally Integration\par
+An admin reviews all the figures on the GQR screen.\par
+\par
+An "Approve & Finalize GQR" button locks the record from any further edits.\par
+\par
+Upon approval, the system triggers an API call to Tally Prime:\par
+\par
+If Balance Due is positive: A Receipt Note/Journal Voucher is sent to Tally to account for the purchase and a Payment Voucher is created for the final payment.\par
+\par
+If Balance Due is negative: A Debit Note is sent to Tally against that vendor's ledger.\par
+\par
+The API should pass itemized details (e.g., '30mm Onions', 'Podi Onions', 'Wastage') to ensure inventory in Tally is updated correctly.\par
+\par
+Reports and Analysis \f3\u-10179?\u-9014?\f0\par
+With the GQR data, you can now generate the complete report the client needs. For each PO, the report should show a side-by-side comparison:\par
+\par
+Metric\tab PO / Estimation\tab GQR / Actuals\tab Variance\par
+Total Weight Supplied\tab N/A (Based on vendor claim)\tab 12 tons\tab -\par
+Export Quality Weight (30mm)\tab 9.6 tons (80% of 12t)\tab 9.5 tons\tab -100 kg\par
+Wastage\tab 1.2 tons (10% damage allowance)\tab (Sum of Rot, Doubles, etc.)\tab (Actual - Estimated)\par
+'Podi' & Gap Items Weight\tab 1.2 tons (Remaining)\tab (Actual Podi + Actual Gap)\tab (Actual - Estimated)\par
+Total Value\tab (Calculated on estimates)\tab (Calculated on actuals)\tab (Actual Value - Estimated Value)\par
+Payment\tab Advance Paid\tab Balance Paid / Debit Note\tab -\par
+\par
+Export to Sheets\par
+This structure provides a clear path for developing the GQR module and delivering the final analysis your client requires.\lang9\par
+}
+ 

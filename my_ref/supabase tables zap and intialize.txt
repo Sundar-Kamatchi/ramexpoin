@@ -1,0 +1,5 @@
+TRUNCATE 
+  public.gqr_entry,
+  public.pre_gr_entry,
+  public.purchase_orders
+RESTART IDENTITY CASCADE;

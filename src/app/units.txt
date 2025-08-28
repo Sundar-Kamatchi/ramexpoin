@@ -1,0 +1,45 @@
+S.No.	Quantity	        Quantity Type	UQC Code
+1	    BAGS	            Measure	        BAG
+2	    BALE	            Measure	        BAL
+3	    BUNDLES	            Measure	        BDL
+4	    BUCKLES	            Measure	        BKL
+5	    BILLIONS OF UNITS	Measure	        BOU
+6	    BOX	                Measure	        BOX
+7	    BOTTLES	            Measure	        BTL
+8	    BUNCHES	            Measure	        BUN
+9	    CANS	            Measure	        CAN
+10	    CUBIC METER	        Volume	        CBM
+11	    CUBIC CENTIMETER	Volume	        CCM
+12	    CENTIMETER	        Length	        CMS
+13	    CARTONS	            Measure	        CTN
+14	    DOZEN	            Measure	        DOZ
+15	    DRUM	            Measure	        DRM
+16	    GREAT GROSS	        Measure	        GGR
+17	    GRAMS	            Weight	        GMS
+18	    GROSS	            Measure	        GRS
+19	    GROSS YARDS	        Length	        GYD
+20	    KILOGRAMS	        Weight	        KGS
+21	    KILOLITER	        Volume	        KLR
+22	    KILOMETRE	        Length	        KME
+23	    MILLILITRE	        Volume	        MLT
+24	    METERS	            Length	        MTR
+25	    METRIC TONS	        Weight	        MTS
+26	    NUMBERS	            Measure	        NOS
+27	    PACKS	            Measure	        PAC
+28	    PIECES	            Measure	        PCS
+29	    PAIRS	            Measure	        PRS
+30	    QUINTAL	            Weight	        QTL
+31	    ROLLS	            Measure	        ROL
+32	    SETS	            Measure	        SET
+33	    SQUARE FEET	        Area	        SQF
+34	    SQUARE METERS	    Area	        SQM
+35	    SQUARE YARDS	    Area	        SQY
+36	    TABLETS	            Measure	        TBS
+37	    TEN GROSS	        Measure	        TGM
+38	    THOUSANDS	        Measure	        THD
+39	    TONNES	            Weight	        TON
+40	    TUBES	            Measure	        TUB
+41	    US GALLONS	        Volume	        UGS
+42	    UNITS	            Measure	        UNT
+43	    YARDS	            Length	        YDS
+44	    OTHERS	 	        OTH
