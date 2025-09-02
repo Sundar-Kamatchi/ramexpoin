@@ -105,16 +105,27 @@ export default function SuppliersPage() {
 
   const handleDeleteSupplier = async () => {
     if (supplierToDelete) {
-      const { error } = await supabase
-        .from('suppliers')
-        .delete()
-        .eq('id', supplierToDelete);
+      try {
+        const { error } = await supabase
+          .from('suppliers')
+          .delete()
+          .eq('id', supplierToDelete);
 
-      if (error) {
+        if (error) {
+          console.error('Delete error:', error);
+          // Check if it's a foreign key constraint error
+          if (error.message.includes('foreign key') || error.message.includes('violates foreign key constraint')) {
+            toast.error('Transaction exists! Can\'t delete');
+          } else {
+            toast.error(`Failed to delete supplier: ${error.message}`);
+          }
+        } else {
+          toast.success('Supplier deleted successfully!');
+          fetchSuppliers(); // Re-fetch data
+        }
+      } catch (error) {
+        console.error('Delete error:', error);
         toast.error(`Failed to delete supplier: ${error.message}`);
-      } else {
-        toast.success('Supplier deleted successfully!');
-        fetchSuppliers(); // Re-fetch data
       }
       closeConfirmDialog();
     }
@@ -132,6 +143,7 @@ export default function SuppliersPage() {
               <p className="mt-2 text-lg text-gray-600 dark:text-gray-400">
                   Add, edit, or remove supplier records.
               </p>
+
           </div>
           <div className="flex items-center space-x-4">
               <Link href="/masters" passHref>

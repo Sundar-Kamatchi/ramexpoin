@@ -6,12 +6,15 @@ import { supabase } from '../../../lib/supabaseClient';
 import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { formatDateDDMMYYYY, parseDDMMYYYY } from '@/utils/dateUtils';
+import DeleteButton from '@/components/DeleteButton';
+import { useAuth } from '@/hooks/use-auth';
 
 
 export default function EditPurchaseOrderPage() {
   const router = useRouter();
   const params = useParams();
   const poId = params.id;
+  const { isAdmin } = useAuth();
   
   const [formData, setFormData] = useState({
     vouchernumber: '',
@@ -35,7 +38,6 @@ export default function EditPurchaseOrderPage() {
   // Admin section
   const [isPoClosed, setIsPoClosed] = useState(false);
   const [adminRemark, setAdminRemark] = useState('');
-  const [isAdmin, setIsAdmin] = useState(false);
   const [originalPoData, setOriginalPoData] = useState(null);
 
   useEffect(() => {
@@ -49,26 +51,7 @@ export default function EditPurchaseOrderPage() {
           throw new Error('Invalid PO ID');
         }
 
-        // Determine admin status
-        let session = null;
-        let userIsAdmin = false;
-        
-        try {
-            const { data: { session: sessionData }, error: sessionError } = await supabase.auth.getSession();
-            session = sessionData;
-            if (sessionError) {
-                console.error('Error fetching session for admin check:', sessionError);
-                userIsAdmin = false;
-            } else {
-                const userEmail = session?.user?.email;
-                userIsAdmin = userEmail && userEmail.startsWith('admin');
-            }
-        } catch (error) {
-            console.log('PO Page: Auth session missing, treating as non-admin');
-            userIsAdmin = false;
-        }
-        
-        setIsAdmin(userIsAdmin);
+
 
         // Fetch suppliers
         const { data: suppliersData, error: suppliersError } = await supabase
@@ -412,23 +395,42 @@ export default function EditPurchaseOrderPage() {
           </div>
         )}
 
-        <div className="flex gap-4">
-          <Button
-            variant="primary"
-            type="submit"
-            disabled={formSubmitted}
-          >
-            {formSubmitted ? 'Updating...' : 'Update Purchase Order'}
-          </Button>
+        <div className="flex justify-between items-center">
+          <div>
+            <DeleteButton
+              itemId={poId}
+              itemName={`Purchase Order ${poId}`}
+              onDelete={async (poId) => {
+                const { error } = await supabase
+                  .from('purchase_orders')
+                  .delete()
+                  .eq('id', poId);
+                if (error) throw error;
+                router.push('/po-list');
+              }}
+              isAdmin={isAdmin}
+              variant="destructive"
+              size="sm"
+            />
+          </div>
+          <div className="flex gap-4">
+            <Button
+              variant="primary"
+              type="submit"
+              disabled={formSubmitted}
+            >
+              {formSubmitted ? 'Updating...' : 'Update Purchase Order'}
+            </Button>
 
-          <Button
-            variant="secondary"
-            type="button"
-            onClick={() => router.push('/po-list')}
-            disabled={formSubmitted}
-          >
-            Cancel
-          </Button>
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={() => router.push('/po-list')}
+              disabled={formSubmitted}
+            >
+              Cancel
+            </Button>
+          </div>
         </div>
       </form>
     </div>

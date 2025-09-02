@@ -1,0 +1,406 @@
+[Collection: GQR Excel Collection]
+Name: GQR Excel Collection
+Description: Reads GQR data from Excel file stored in Supabase Storage
+
+[Field: ExcelExportURL]
+Type: String
+$$BrowseURL: https://mdsaqgaxmkedrohxrqtl.supabase.co/functions/v1/gqr-excel-export
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: ExcelExportData]
+Type: String
+$$Formula: $$ParseJSON:ExcelExportURL
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: ExcelFileURL]
+Type: String
+$$Formula: $$GetJSON:ExcelExportData,downloadUrl
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: ExcelFileName]
+Type: String
+$$Formula: $$GetJSON:ExcelExportData,fileName
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: ExcelRecordCount]
+Type: Number
+$$Formula: $$GetJSON:ExcelExportData,count
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: ExcelExportStatus]
+Type: String
+$$Formula: $$GetJSON:ExcelExportData,message
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: ExcelExportTimestamp]
+Type: String
+$$Formula: $$GetJSON:ExcelExportData,timestamp
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: CurrentExcelIndex]
+Type: Number
+$$DefaultValue: 0
+$$IsEditable: Yes
+
+[Field: ExcelDataTable]
+Type: String
+$$BrowseURL: $$ExcelFileURL
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: ExcelDataParsed]
+Type: String
+$$Formula: $$ParseXML:ExcelDataTable
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: ExcelRows]
+Type: String
+$$Formula: $$GetXML:ExcelDataParsed,Workbook.Worksheet.Table.Row
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: CurrentRow]
+Type: String
+$$Formula: $$GetXML:ExcelRows,$$CurrentExcelIndex
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: CurrentRowCells]
+Type: String
+$$Formula: $$GetXML:CurrentRow,Cell
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: GQRId]
+Type: String
+$$Formula: $$GetXML:CurrentRowCells,1.Data
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: GQRDate]
+Type: Date
+$$Formula: $$GetXML:CurrentRowCells,2.Data
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: PONumber]
+Type: String
+$$Formula: $$GetXML:CurrentRowCells,6.Data
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: PODate]
+Type: Date
+$$Formula: $$GetXML:CurrentRowCells,7.Data
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: POItem]
+Type: String
+$$Formula: $$GetXML:CurrentRowCells,8.Data
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: PORate]
+Type: Number
+$$Formula: $$GetXML:CurrentRowCells,9.Data
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: SupplierName]
+Type: String
+$$Formula: $$GetXML:CurrentRowCells,13.Data
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: GRNumber]
+Type: String
+$$Formula: $$GetXML:CurrentRowCells,18.Data
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: GRDate]
+Type: Date
+$$Formula: $$GetXML:CurrentRowCells,19.Data
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: ExportItemQty]
+Type: Number
+$$Formula: $$GetXML:CurrentRowCells,23.Data
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: ExportItemRate]
+Type: Number
+$$Formula: $$GetXML:CurrentRowCells,24.Data
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: PodiQty]
+Type: Number
+$$Formula: $$GetXML:CurrentRowCells,28.Data
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: PodiRate]
+Type: Number
+$$Formula: $$GetXML:CurrentRowCells,29.Data
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: GapItemQty]
+Type: Number
+$$Formula: $$GetXML:CurrentRowCells,32.Data
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: GapItemRate]
+Type: Number
+$$Formula: $$GetXML:CurrentRowCells,34.Data
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: WastageQty]
+Type: Number
+$$Formula: $$GetXML:CurrentRowCells,36.Data
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: TotalValue]
+Type: Number
+$$Formula: $$GetXML:CurrentRowCells,48.Data
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: IsTallyPosted]
+Type: Boolean
+$$Formula: $$GetXML:CurrentRowCells,4.Data
+$$IsEditable: No
+$$IsVisible: No
+
+[Button: Export to Excel]
+$$OnClick: $$Refresh:ExcelExportURL
+$$Text: Export GQR to Excel
+$$IsVisible: Yes
+
+[Button: Refresh Excel Data]
+$$OnClick: $$Refresh:ExcelDataTable
+$$Text: Refresh Excel Data
+$$IsVisible: Yes
+
+[Button: Previous Record]
+$$OnClick: $$Set:CurrentExcelIndex,$$CurrentExcelIndex-1
+$$Text: Previous
+$$IsVisible: Yes
+$$IsEnabled: $$CurrentExcelIndex>0
+
+[Button: Next Record]
+$$OnClick: $$Set:CurrentExcelIndex,$$CurrentExcelIndex+1
+$$Text: Next
+$$IsVisible: Yes
+$$IsEnabled: $$CurrentExcelIndex<$$ExcelRecordCount-1
+
+[Button: Create Purchase Voucher]
+$$OnClick: $$CreatePurchaseVoucherFromExcel
+$$Text: Create Purchase Voucher
+$$IsVisible: Yes
+$$IsEnabled: $$IsTallyPosted=False
+
+[Button: Mark as Posted]
+$$OnClick: $$MarkAsPostedFromExcel
+$$Text: Mark as Posted
+$$IsVisible: Yes
+$$IsEnabled: $$IsTallyPosted=False
+
+[Form: GQR Excel Data Viewer]
+Title: GQR Excel Data Viewer
+$$IsVisible: Yes
+
+[Part: Excel Export Status]
+$$IsVisible: Yes
+
+[Field: Export Status]
+$$IsVisible: Yes
+$$Text: $$ExcelExportStatus
+
+[Field: File Name]
+$$IsVisible: Yes
+$$Text: File: $$ExcelFileName
+
+[Field: Record Count]
+$$IsVisible: Yes
+$$Text: Records: $$ExcelRecordCount
+
+[Field: Last Updated]
+$$IsVisible: Yes
+$$Text: Updated: $$ExcelExportTimestamp
+
+[Part: GQR Information]
+$$IsVisible: Yes
+
+[Field: GQR ID]
+$$IsVisible: Yes
+$$Text: GQR ID: $$GQRId
+
+[Field: GQR Date]
+$$IsVisible: Yes
+$$Text: GQR Date: $$GQRDate
+
+[Field: PO Information]
+$$IsVisible: Yes
+$$Text: PO: $$PONumber ($$PODate) - $$POItem
+
+[Field: Supplier]
+$$IsVisible: Yes
+$$Text: Supplier: $$SupplierName
+
+[Field: GR Information]
+$$IsVisible: Yes
+$$Text: GR: $$GRNumber ($$GRDate)
+
+[Part: Quantities and Rates]
+$$IsVisible: Yes
+
+[Field: Export Item]
+$$IsVisible: Yes
+$$Text: Export Item: $$ExportItemQty MT @ $$ExportItemRate
+
+[Field: Podi]
+$$IsVisible: Yes
+$$Text: Podi: $$PodiQty MT @ $$PodiRate
+
+[Field: Gap Items]
+$$IsVisible: Yes
+$$Text: Gap Items: $$GapItemQty MT @ $$GapItemRate
+
+[Field: Wastage]
+$$IsVisible: Yes
+$$Text: Wastage: $$WastageQty MT
+
+[Field: Total Value]
+$$IsVisible: Yes
+$$Text: Total Value: $$TotalValue
+
+[Field: Tally Status]
+$$IsVisible: Yes
+$$Text: Tally Posted: $$IsTallyPosted
+
+[Part: Navigation and Actions]
+$$IsVisible: Yes
+
+[Field: Record Info]
+$$IsVisible: Yes
+$$Text: Record $$CurrentExcelIndex+1 of $$ExcelRecordCount
+
+[Part: Buttons]
+$$IsVisible: Yes
+
+[Field: Export Button]
+$$IsVisible: Yes
+$$Text: $$Export to Excel
+
+[Field: Refresh Button]
+$$IsVisible: Yes
+$$Text: $$Refresh Excel Data
+
+[Field: Previous Button]
+$$IsVisible: Yes
+$$Text: $$Previous Record
+
+[Field: Next Button]
+$$IsVisible: Yes
+$$Text: $$Next Record
+
+[Field: Create Voucher Button]
+$$IsVisible: Yes
+$$Text: $$Create Purchase Voucher
+
+[Field: Mark Posted Button]
+$$IsVisible: Yes
+$$Text: $$Mark as Posted
+
+[Function: CreatePurchaseVoucherFromExcel]
+$$OnClick: 
+  $$CreateVoucher:Purchase
+  $$SetVoucherField:Date,$$GRDate
+  $$SetVoucherField:PartyLedgerName,$$SupplierName
+  $$SetVoucherField:VoucherTypeName,Purchase
+  $$SetVoucherField:Reference,$$PONumber
+  $$SetVoucherField:Narration,GQR $$GQRId - $$POItem (Excel Import)
+  
+  // Add Export Item Entry
+  $$AddVoucherEntry:$$POItem
+  $$SetEntryField:Quantity,$$ExportItemQty
+  $$SetEntryField:Rate,$$ExportItemRate
+  $$SetEntryField:Amount,$$ExportItemQty*$$ExportItemRate
+  
+  // Add Podi Entry if exists
+  $$If:$$PodiQty>0
+    $$AddVoucherEntry:$$POItem
+    $$SetEntryField:Quantity,$$PodiQty
+    $$SetEntryField:Rate,$$PodiRate
+    $$SetEntryField:Amount,$$PodiQty*$$PodiRate
+  $$EndIf
+  
+  // Add Gap Items Entry if exists
+  $$If:$$GapItemQty>0
+    $$AddVoucherEntry:$$POItem
+    $$SetEntryField:Quantity,$$GapItemQty
+    $$SetEntryField:Rate,$$GapItemRate
+    $$SetEntryField:Amount,$$GapItemQty*$$GapItemRate
+  $$EndIf
+  
+  // Add Wastage Entry if exists
+  $$If:$$WastageQty>0
+    $$AddVoucherEntry:$$POItem
+    $$SetEntryField:Quantity,$$WastageQty
+    $$SetEntryField:Rate,$$ExportItemRate
+    $$SetEntryField:Amount,$$WastageQty*$$ExportItemRate
+  $$EndIf
+  
+  $$SaveVoucher
+  $$Message:Voucher created successfully for GQR $$GQRId (Excel Import)
+
+[Function: MarkAsPostedFromExcel]
+$$OnClick: 
+  // This would typically call back to update is_tally_posted in Supabase
+  $$Message:GQR $$GQRId marked as posted to Tally (Excel Import)
+  $$Refresh:ExcelDataTable
+
+[Menu: GQR Excel Integration]
+$$IsVisible: Yes
+$$Text: GQR Excel Integration
+
+[MenuItem: View Excel Data]
+$$OnClick: $$ShowForm:GQR Excel Data Viewer
+$$Text: View Excel Data
+
+[MenuItem: Export to Excel]
+$$OnClick: $$Refresh:ExcelExportURL
+$$Text: Export GQR to Excel
+
+[MenuItem: Refresh Excel Data]
+$$OnClick: $$Refresh:ExcelDataTable
+$$Text: Refresh from Excel File
+
+[MenuItem: Create All Vouchers]
+$$OnClick: $$CreateAllVouchersFromExcel
+$$Text: Create All Vouchers
+
+[Function: CreateAllVouchersFromExcel]
+$$OnClick: 
+  $$For:$$CurrentExcelIndex,0,$$ExcelRecordCount-1
+    $$If:$$IsTallyPosted=False
+      $$CreatePurchaseVoucherFromExcel
+    $$EndIf
+  $$EndFor
+  $$Message:All vouchers created successfully from Excel

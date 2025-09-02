@@ -60,7 +60,7 @@ export default function POListPage() {
                         <Button variant="primary">+ Create New PO</Button>
                     </Link> 
                     <Link href="/" passHref>
-                        <Button variant="outline">Home</Button>
+                        <Button variant="primary">Home</Button>
                     </Link>
                 </div>
             </div>

@@ -71,7 +71,7 @@ export const PreGrPrintLayout = ({ data }) => {
         justifyContent: 'flex-start'
       }}>
         
-        {/* --- Header --- */}
+        {/* --- Header (Company Title - 2nd half of Page 3) --- */}
         <div style={{ 
           textAlign: 'center', 
           marginBottom: '6px',
@@ -111,21 +111,10 @@ export const PreGrPrintLayout = ({ data }) => {
           </h2>
         </div>
 
-        {/* --- Main Content --- */}
+        {/* --- Main Content (Page 4 Content) --- */}
         <div style={{ flex: '1' }}>
-          {/* --- Main Details --- */}
-          <section style={{ marginBottom: '2px' }}>
-              <PairedRow label1="GR No." value1={grNo} label2="GR Date" value2={grDate} />
-              <PairedRow label1="PO No." value1={poVoucherNumber} label2="PO Date" value2={selectedPo ? formatDateDDMMYYYY(selectedPo.date) : '—'} />
-              <SingleRow label="Supplier" value={supplierName} />
-              <SingleRow label="Item / Quality" value={itemQuality} />
-              <PairedRow label1="Loaded From" value1={loadedFrom} label2="Vehicle No." value2={vehicleNo} />
-              <PairedRow label1="Weight Bridge" value1={weightBridgeName} label2="No. of Bags" value2={bags} />
-              <PairedRow label1="Damage per ton kg" value1={poDamageAllowed ? `${poDamageAllowed} kg` : '—'} label2="Assured Cargo" value2={poCargo ? `${poCargo}%` : '—'} />
-          </section>
-
-          {/* --- Weight Details --- */}
-          <section style={{ marginBottom: '2px', marginTop: '50px' }}>
+          {/* --- Weight Details (Page 4 - Primary Content) --- */}
+          <section style={{ marginBottom: '2px', marginTop: '20px' }}>
               <h3 style={{ 
                 fontSize: '11px', 
                 fontWeight: 'bold', 
@@ -164,8 +153,8 @@ export const PreGrPrintLayout = ({ data }) => {
               </div>
           </section>
           
-          {/* --- Additional Details --- */}
-          <section style={{ marginBottom: '2px', marginTop: '50px' }}>
+          {/* --- Additional Details (Page 4) --- */}
+          <section style={{ marginBottom: '2px', marginTop: '30px' }}>
               <h3 style={{ 
                   fontSize: '11px', 
                   fontWeight: 'bold', 
@@ -184,7 +173,7 @@ export const PreGrPrintLayout = ({ data }) => {
               />
           </section>
 
-          {/* --- Admin Approval Section --- */}
+          {/* --- Admin Approval Section (Page 4) --- */}
           {isAdminApproved && (
               <section style={{
                 border: '1px solid #10b981',
@@ -192,7 +181,7 @@ export const PreGrPrintLayout = ({ data }) => {
                 padding: '4px',
                 borderRadius: '3px',
                 marginBottom: '2px',
-                marginTop: '50px'
+                marginTop: '30px'
               }}>
                   <h3 style={{ 
                     fontSize: '14px', 
@@ -218,7 +207,30 @@ export const PreGrPrintLayout = ({ data }) => {
                   </div>
               </section>
           )}
+
+          {/* --- Essential Details (Minimal from Page 3) --- */}
+          <section style={{ marginBottom: '2px', marginTop: '30px' }}>
+              <h3 style={{ 
+                fontSize: '11px', 
+                fontWeight: 'bold', 
+                color: 'black', 
+                marginBottom: '2px',
+                borderBottom: '1px solid #e5e7eb',
+                paddingBottom: '1px'
+              }}>
+                Essential Details
+              </h3>
+              <PairedRow label1="GR No." value1={grNo} label2="GR Date" value2={grDate} />
+              <PairedRow label1="PO No." value1={poVoucherNumber} label2="PO Date" value2={selectedPo ? formatDateDDMMYYYY(selectedPo.date) : '—'} />
+              <SingleRow label="Supplier" value={supplierName} />
+              <SingleRow label="Item / Quality" value={itemQuality} />
+              <PairedRow label1="Loaded From" value1={loadedFrom} label2="Vehicle No." value2={vehicleNo} />
+              <PairedRow label1="Weight Bridge" value1={weightBridgeName} label2="No. of Bags" value2={bags} />
+              <PairedRow label1="Damage per ton kg" value1={poDamageAllowed ? `${poDamageAllowed} kg` : '—'} label2="Assured Cargo" value2={poCargo ? `${poCargo}%` : '—'} />
+          </section>
         </div>
+
+        {/* --- Footer --- */}
         <div className="hidden print:flex justify-between items-center p-2 py-1 border-b border-gray-200 mt-2">
           <div>
             <p style={{ fontSize: '9px', fontWeight: 600, color: 'black', margin: 0 }}>Prepared By ({preparedBy || 'User'})</p>

@@ -1,0 +1,322 @@
+[Collection: GQR to Tally Integration]
+Name: GQR to Tally Integration
+Description: Fetches GQR data from Supabase Edge Function and creates purchase vouchers
+
+[Field: GQRData]
+Type: String
+$$BrowseURL: https://mdsaqgaxmkedrohxrqtl.supabase.co/functions/v1/new-gqr-data
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: GQRDataParsed]
+Type: String
+$$Formula: $$ParseJSON:GQRData
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: GQRRecords]
+Type: String
+$$Formula: $$GetJSON:GQRDataParsed,data
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: GQRCount]
+Type: Number
+$$Formula: $$GetJSON:GQRDataParsed,count
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: CurrentIndex]
+Type: Number
+$$DefaultValue: 0
+$$IsEditable: Yes
+
+[Field: CurrentGQR]
+Type: String
+$$Formula: $$GetJSON:GQRRecords,$$CurrentIndex
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: GQRId]
+Type: String
+$$Formula: $$GetJSON:CurrentGQR,gqrId
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: PONumber]
+Type: String
+$$Formula: $$GetJSON:CurrentGQR,pono
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: PODate]
+Type: Date
+$$Formula: $$GetJSON:CurrentGQR,podate
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: POItem]
+Type: String
+$$Formula: $$GetJSON:CurrentGQR,poitem
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: PORate]
+Type: Number
+$$Formula: $$GetJSON:CurrentGQR,porate
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: SupplierName]
+Type: String
+$$Formula: $$GetJSON:CurrentGQR,supplierName
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: GRNumber]
+Type: String
+$$Formula: $$GetJSON:CurrentGQR,grNo
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: GRDate]
+Type: Date
+$$Formula: $$GetJSON:CurrentGQR,grDate
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: ExportItemQty]
+Type: Number
+$$Formula: $$GetJSON:CurrentGQR,exportItemQty
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: ExportItemRate]
+Type: Number
+$$Formula: $$GetJSON:CurrentGQR,exportItemRate
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: PodiQty]
+Type: Number
+$$Formula: $$GetJSON:CurrentGQR,podiQty
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: PodiRate]
+Type: Number
+$$Formula: $$GetJSON:CurrentGQR,podiVolatileRate
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: GapItemQty]
+Type: Number
+$$Formula: $$GetJSON:CurrentGQR,gapItem1Qty
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: GapItemRate]
+Type: Number
+$$Formula: $$GetJSON:CurrentGQR,gapItemVolatileRate
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: WastageQty]
+Type: Number
+$$Formula: $$GetJSON:CurrentGQR,wastageQty
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: TotalValue]
+Type: Number
+$$Formula: $$GetJSON:CurrentGQR,totalValue
+$$IsEditable: No
+$$IsVisible: No
+
+[Field: IsTallyPosted]
+Type: Boolean
+$$Formula: $$GetJSON:CurrentGQR,isTallyPosted
+$$IsEditable: No
+$$IsVisible: No
+
+[Button: Refresh Data]
+$$OnClick: $$Refresh:GQRData
+$$Text: Refresh GQR Data
+$$IsVisible: Yes
+
+[Button: Previous Record]
+$$OnClick: $$Set:CurrentIndex,$$CurrentIndex-1
+$$Text: Previous
+$$IsVisible: Yes
+$$IsEnabled: $$CurrentIndex>0
+
+[Button: Next Record]
+$$OnClick: $$Set:CurrentIndex,$$CurrentIndex+1
+$$Text: Next
+$$IsVisible: Yes
+$$IsEnabled: $$CurrentIndex<$$GQRCount-1
+
+[Button: Create Purchase Voucher]
+$$OnClick: $$CreatePurchaseVoucher
+$$Text: Create Purchase Voucher
+$$IsVisible: Yes
+$$IsEnabled: $$IsTallyPosted=False
+
+[Button: Mark as Posted]
+$$OnClick: $$MarkAsPosted
+$$Text: Mark as Posted
+$$IsVisible: Yes
+$$IsEnabled: $$IsTallyPosted=False
+
+[Form: GQR Data Viewer]
+Title: GQR Data Viewer
+$$IsVisible: Yes
+
+[Part: GQR Information]
+$$IsVisible: Yes
+
+[Field: GQR ID]
+$$IsVisible: Yes
+$$Text: GQR ID: $$GQRId
+
+[Field: PO Information]
+$$IsVisible: Yes
+$$Text: PO: $$PONumber ($$PODate) - $$POItem
+
+[Field: Supplier]
+$$IsVisible: Yes
+$$Text: Supplier: $$SupplierName
+
+[Field: GR Information]
+$$IsVisible: Yes
+$$Text: GR: $$GRNumber ($$GRDate)
+
+[Part: Quantities and Rates]
+$$IsVisible: Yes
+
+[Field: Export Item]
+$$IsVisible: Yes
+$$Text: Export Item: $$ExportItemQty MT @ $$ExportItemRate
+
+[Field: Podi]
+$$IsVisible: Yes
+$$Text: Podi: $$PodiQty MT @ $$PodiRate
+
+[Field: Gap Items]
+$$IsVisible: Yes
+$$Text: Gap Items: $$GapItemQty MT @ $$GapItemRate
+
+[Field: Wastage]
+$$IsVisible: Yes
+$$Text: Wastage: $$WastageQty MT
+
+[Field: Total Value]
+$$IsVisible: Yes
+$$Text: Total Value: $$TotalValue
+
+[Field: Tally Status]
+$$IsVisible: Yes
+$$Text: Tally Posted: $$IsTallyPosted
+
+[Part: Navigation and Actions]
+$$IsVisible: Yes
+
+[Field: Record Info]
+$$IsVisible: Yes
+$$Text: Record $$CurrentIndex+1 of $$GQRCount
+
+[Part: Buttons]
+$$IsVisible: Yes
+
+[Field: Previous Button]
+$$IsVisible: Yes
+$$Text: $$Previous Record
+
+[Field: Next Button]
+$$IsVisible: Yes
+$$Text: $$Next Record
+
+[Field: Refresh Button]
+$$IsVisible: Yes
+$$Text: $$Refresh Data
+
+[Field: Create Voucher Button]
+$$IsVisible: Yes
+$$Text: $$Create Purchase Voucher
+
+[Field: Mark Posted Button]
+$$IsVisible: Yes
+$$Text: $$Mark as Posted
+
+[Function: CreatePurchaseVoucher]
+$$OnClick: 
+  $$CreateVoucher:Purchase
+  $$SetVoucherField:Date,$$GRDate
+  $$SetVoucherField:PartyLedgerName,$$SupplierName
+  $$SetVoucherField:VoucherTypeName,Purchase
+  $$SetVoucherField:Reference,$$PONumber
+  $$SetVoucherField:Narration,GQR $$GQRId - $$POItem
+  
+  // Add Export Item Entry
+  $$AddVoucherEntry:$$POItem
+  $$SetEntryField:Quantity,$$ExportItemQty
+  $$SetEntryField:Rate,$$ExportItemRate
+  $$SetEntryField:Amount,$$ExportItemQty*$$ExportItemRate
+  
+  // Add Podi Entry if exists
+  $$If:$$PodiQty>0
+    $$AddVoucherEntry:$$POItem
+    $$SetEntryField:Quantity,$$PodiQty
+    $$SetEntryField:Rate,$$PodiRate
+    $$SetEntryField:Amount,$$PodiQty*$$PodiRate
+  $$EndIf
+  
+  // Add Gap Items Entry if exists
+  $$If:$$GapItemQty>0
+    $$AddVoucherEntry:$$POItem
+    $$SetEntryField:Quantity,$$GapItemQty
+    $$SetEntryField:Rate,$$GapItemRate
+    $$SetEntryField:Amount,$$GapItemQty*$$GapItemRate
+  $$EndIf
+  
+  // Add Wastage Entry if exists
+  $$If:$$WastageQty>0
+    $$AddVoucherEntry:$$POItem
+    $$SetEntryField:Quantity,$$WastageQty
+    $$SetEntryField:Rate,$$ExportItemRate
+    $$SetEntryField:Amount,$$WastageQty*$$ExportItemRate
+  $$EndIf
+  
+  $$SaveVoucher
+  $$Message:Voucher created successfully for GQR $$GQRId
+
+[Function: MarkAsPosted]
+$$OnClick: 
+  // This would typically call back to your Edge Function to update is_tally_posted
+  $$Message:GQR $$GQRId marked as posted to Tally
+  $$Refresh:GQRData
+
+[Menu: GQR Integration]
+$$IsVisible: Yes
+$$Text: GQR Integration
+
+[MenuItem: View GQR Data]
+$$OnClick: $$ShowForm:GQR Data Viewer
+$$Text: View GQR Data
+
+[MenuItem: Refresh Data]
+$$OnClick: $$Refresh:GQRData
+$$Text: Refresh from Supabase
+
+[MenuItem: Create All Vouchers]
+$$OnClick: $$CreateAllVouchers
+$$Text: Create All Vouchers
+
+[Function: CreateAllVouchers]
+$$OnClick: 
+  $$For:$$CurrentIndex,0,$$GQRCount-1
+    $$If:$$IsTallyPosted=False
+      $$CreatePurchaseVoucher
+    $$EndIf
+  $$EndFor
+  $$Message:All vouchers created successfully

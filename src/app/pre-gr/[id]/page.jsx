@@ -7,6 +7,8 @@ import { toast } from 'sonner';
 import { formatDateDDMMYYYY, numberToWords } from '@/utils/dateUtils';
 import { Printer } from 'lucide-react';
 import { PreGrPrintLayout } from '@/utils/pre_gr_print'; // Import the new print component
+import DeleteButton from '@/components/DeleteButton';
+import { useAuth } from '@/hooks/use-auth';
 
 // Helper to convert DD/MM/YYYY to YYYY-MM-DD
 const toISODate = (ddmmyyyy) => {
@@ -22,6 +24,7 @@ export default function PreGRPage() {
     const router = useRouter();
     const params = useParams();
     const id = params.id;
+    const { isAdmin } = useAuth();
     const [loading, setLoading] = useState(true);
 
     // Data for dropdowns
@@ -60,7 +63,6 @@ export default function PreGRPage() {
     const [isAdminApproved, setIsAdminApproved] = useState(false);
     const [adminRemark, setAdminRemark] = useState('');
     const [advanceAmount, setAdvanceAmount] = useState('');
-    const [isAdmin, setIsAdmin] = useState(false);
     const [sieveNo, setSieveNo] = useState('');
     const [preparedBy, setPreparedBy] = useState('');
     const [weightShortage, setWeightShortage] = useState('');
@@ -73,22 +75,6 @@ export default function PreGRPage() {
             setLoading(true);
             try {
                 console.log('Pre-GR Page: Starting to fetch data...');
-                
-                let session = null;
-                let userIsAdmin = false;
-                
-                try {
-                    const { data: { session: sessionData } } = await supabase.auth.getSession();
-                    session = sessionData;
-                    userIsAdmin = session?.user?.email?.startsWith('admin');
-                } catch (error) {
-                    console.log('Pre-GR Page: Auth session missing, treating as non-admin');
-                    userIsAdmin = false;
-                }
-                
-                setIsAdmin(!!userIsAdmin);
-                
-                console.log('Pre-GR Page: User session:', session?.user?.email, 'Is Admin:', userIsAdmin);
 
                 const [poRes, supRes, itemRes, gapRes] = await Promise.all([
                     supabase.from('purchase_orders').select('id, vouchernumber, date, supplier_id, item_id, quantity, rate, cargo, damage_allowed_kgs_ton, suppliers(name)'),
@@ -320,10 +306,41 @@ export default function PreGRPage() {
     };
 
     const handleCancel = () => router.push('/pre-gr-list');
+
+    const handleDelete = async (preGrId) => {
+        try {
+            const { error } = await supabase
+                .from('pre_gr_entry')
+                .delete()
+                .eq('id', preGrId);
+
+            if (error) {
+                throw new Error(error.message);
+            }
+
+            toast.success('Pre-GR entry deleted successfully');
+            router.push('/pre-gr-list');
+        } catch (error) {
+            console.error('Delete error:', error);
+            throw error;
+        }
+    };
     
+    // Convert kgs to tons for print layout
+    const ladenWtTons = ladenWtKgs ? Math.floor(parseFloat(ladenWtKgs) / 1000).toString() : '';
+    const ladenWtKgsRemainder = ladenWtKgs ? (parseFloat(ladenWtKgs) % 1000).toString() : '';
+    const emptyWtTons = emptyWtKgs ? Math.floor(parseFloat(emptyWtKgs) / 1000).toString() : '';
+    const emptyWtKgsRemainder = emptyWtKgs ? (parseFloat(emptyWtKgs) % 1000).toString() : '';
+    const goodsWtTons = goodsWtKgs ? Math.floor(parseFloat(goodsWtKgs) / 1000).toString() : '';
+    const goodsWtKgsRemainder = goodsWtKgs ? (parseFloat(goodsWtKgs) % 1000).toString() : '';
+
     const printData = {
         grNo, grDate, poVoucherNumber, selectedPo, supplierName, itemQuality, loadedFrom, vehicleNo, weightBridgeName, bags,
-        poDamageAllowed, poCargo, ladenWtKgs, emptyWtKgs, goodsWtKgs, podiBags,
+        poDamageAllowed, poCargo, 
+        ladenWtTons, ladenWtKgs: ladenWtKgsRemainder, 
+        emptyWtTons, emptyWtKgs: emptyWtKgsRemainder, 
+        goodsWtTons, goodsWtKgs: goodsWtKgsRemainder, 
+        podiBags,
         gapItem1Id, gapItem1Bags, gapItem2Id, gapItem2Bags, gapItems, isAdminApproved, advanceAmount, adminRemark, preparedBy,
         weightShortage, remarks
     };
@@ -331,8 +348,25 @@ export default function PreGRPage() {
     if (loading) return <div className="text-center p-4">Loading...</div>;
 
     return (
-        <div className="container mx-auto p-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg mt-20">
-            <div className="print-hide">
+        <>
+            {/* Print styles */}
+            <style>{`
+                @media print {
+                    .print-hide {
+                        display: none !important;
+                    }
+                    #pre-gr-print-container {
+                        display: block !important;
+                        visibility: visible !important;
+                    }
+                    body {
+                        margin: 0 !important;
+                        padding: 0 !important;
+                    }
+                }
+            `}</style>
+            <div className="container mx-auto p-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg mt-20" style={{ position: 'relative' }}>
+            <div className="print-hide print:hidden" style={{ display: 'block' }}>
                 <h2 className="text-3xl font-semibold text-green-800 dark:text-green-200 mb-2 text-center">
                     Pre-GR Entry {preGREntryId ? 'Alteration' : 'Creation'}
                 </h2>
@@ -536,18 +570,33 @@ export default function PreGRPage() {
                         </div>
                     ) : null}
                     
-                    <div className="flex justify-end space-x-4">
-                        {isAdminApproved && <button type="button" onClick={() => window.print()} className="inline-flex items-center justify-center py-2 px-4 border border-blue-300 shadow-sm text-sm font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50 dark:bg-blue-800 dark:text-blue-200"><Printer className="w-4 h-4 mr-2" />Print</button>}
-                        <button type="button" onClick={handleCancel} className="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-600 dark:text-gray-200" disabled={loading}>Cancel</button>
-                        <button type="submit" className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50" disabled={loading || isApprovalSectionDisabledForNonAdmin}>{loading ? 'Saving...' : 'Save Pre-GR Entry'}</button>
+                    <div className="flex justify-between items-center">
+                        <div>
+                            {preGREntryId && (
+                                <DeleteButton
+                                    itemId={preGREntryId}
+                                    itemName={`Pre-GR Entry ${preGREntryId}`}
+                                    onDelete={handleDelete}
+                                    isAdmin={isAdmin}
+                                    variant="destructive"
+                                    size="sm"
+                                />
+                            )}
+                        </div>
+                        <div className="flex space-x-4">
+                            {isAdminApproved && <button type="button" onClick={() => window.print()} className="inline-flex items-center justify-center py-2 px-4 border border-blue-300 shadow-sm text-sm font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50 dark:bg-blue-800 dark:text-blue-200"><Printer className="w-4 h-4 mr-2" />Print</button>}
+                            <button type="button" onClick={handleCancel} className="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-600 dark:text-gray-200" disabled={loading}>Cancel</button>
+                            <button type="submit" className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50" disabled={loading || isApprovalSectionDisabledForNonAdmin}>{loading ? 'Saving...' : 'Save Pre-GR Entry'}</button>
+                        </div>
                     </div>
                 </form>
             </div>
 
             {/* Render the separate print layout component, which is only visible on print */}
-            <div id="pre-gr-print-container" className="hidden print:block">
+            <div id="pre-gr-print-container" className="hidden print:block print:visible">
                 <PreGrPrintLayout data={printData} />
             </div>
         </div>
+        </>
     );
 }

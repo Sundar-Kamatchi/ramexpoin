@@ -1,0 +1,289 @@
+{
+	"info": {
+		"_postman_id": "gqr-supabase-api",
+		"name": "GQR Supabase API",
+		"description": "Direct access to Supabase GQR data using REST API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Fetch All GQR Records",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "apikey",
+						"value": "{{SUPABASE_ANON_KEY}}",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{SUPABASE_ANON_KEY}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{SUPABASE_URL}}/rest/v1/gqr_entry?select=*,pre_gr_entry(id,vouchernumber,net_wt,ladden_wt,empty_wt,date,purchase_orders(id,vouchernumber,date,rate,podi_rate,quantity,damage_allowed_kgs_ton,cargo,suppliers(id,name),item_master(id,item_name,hsn_code,item_unit)))&gqr_status=eq.Closed&order=created_at.desc&limit=100",
+					"host": [
+						"{{SUPABASE_URL}}"
+					],
+					"path": [
+						"rest",
+						"v1",
+						"gqr_entry"
+					],
+					"query": [
+						{
+							"key": "select",
+							"value": "*,pre_gr_entry(id,vouchernumber,net_wt,ladden_wt,empty_wt,date,purchase_orders(id,vouchernumber,date,rate,podi_rate,quantity,damage_allowed_kgs_ton,cargo,suppliers(id,name),item_master(id,item_name,hsn_code,item_unit)))"
+						},
+						{
+							"key": "gqr_status",
+							"value": "eq.Closed"
+						},
+						{
+							"key": "order",
+							"value": "created_at.desc"
+						},
+						{
+							"key": "limit",
+							"value": "100"
+						}
+					]
+				},
+				"description": "Fetch all closed GQR records with related data"
+			}
+		},
+		{
+			"name": "Fetch Unposted GQR Records",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "apikey",
+						"value": "{{SUPABASE_ANON_KEY}}",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{SUPABASE_ANON_KEY}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{SUPABASE_URL}}/rest/v1/gqr_entry?select=*,pre_gr_entry(id,vouchernumber,net_wt,ladden_wt,empty_wt,date,purchase_orders(id,vouchernumber,date,rate,podi_rate,quantity,damage_allowed_kgs_ton,cargo,suppliers(id,name),item_master(id,item_name,hsn_code,item_unit)))&gqr_status=eq.Closed&is_tally_posted=eq.false&order=created_at.desc&limit=100",
+					"host": [
+						"{{SUPABASE_URL}}"
+					],
+					"path": [
+						"rest",
+						"v1",
+						"gqr_entry"
+					],
+					"query": [
+						{
+							"key": "select",
+							"value": "*,pre_gr_entry(id,vouchernumber,net_wt,ladden_wt,empty_wt,date,purchase_orders(id,vouchernumber,date,rate,podi_rate,quantity,damage_allowed_kgs_ton,cargo,suppliers(id,name),item_master(id,item_name,hsn_code,item_unit)))"
+						},
+						{
+							"key": "gqr_status",
+							"value": "eq.Closed"
+						},
+						{
+							"key": "is_tally_posted",
+							"value": "eq.false"
+						},
+						{
+							"key": "order",
+							"value": "created_at.desc"
+						},
+						{
+							"key": "limit",
+							"value": "100"
+						}
+					]
+				},
+				"description": "Fetch GQR records that haven't been posted to Tally yet"
+			}
+		},
+		{
+			"name": "Fetch Posted GQR Records",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "apikey",
+						"value": "{{SUPABASE_ANON_KEY}}",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{SUPABASE_ANON_KEY}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{SUPABASE_URL}}/rest/v1/gqr_entry?select=*,pre_gr_entry(id,vouchernumber,net_wt,ladden_wt,empty_wt,date,purchase_orders(id,vouchernumber,date,rate,podi_rate,quantity,damage_allowed_kgs_ton,cargo,suppliers(id,name),item_master(id,item_name,hsn_code,item_unit)))&gqr_status=eq.Closed&is_tally_posted=eq.true&order=created_at.desc&limit=100",
+					"host": [
+						"{{SUPABASE_URL}}"
+					],
+					"path": [
+						"rest",
+						"v1",
+						"gqr_entry"
+					],
+					"query": [
+						{
+							"key": "select",
+							"value": "*,pre_gr_entry(id,vouchernumber,net_wt,ladden_wt,empty_wt,date,purchase_orders(id,vouchernumber,date,rate,podi_rate,quantity,damage_allowed_kgs_ton,cargo,suppliers(id,name),item_master(id,item_name,hsn_code,item_unit)))"
+						},
+						{
+							"key": "gqr_status",
+							"value": "eq.Closed"
+						},
+						{
+							"key": "is_tally_posted",
+							"value": "eq.true"
+						},
+						{
+							"key": "order",
+							"value": "created_at.desc"
+						},
+						{
+							"key": "limit",
+							"value": "100"
+						}
+					]
+				},
+				"description": "Fetch GQR records that have already been posted to Tally"
+			}
+		},
+		{
+			"name": "Update Tally Posted Status",
+			"request": {
+				"method": "PATCH",
+				"header": [
+					{
+						"key": "apikey",
+						"value": "{{SUPABASE_ANON_KEY}}",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{SUPABASE_ANON_KEY}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "Prefer",
+						"value": "return=minimal",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"is_tally_posted\": true,\n  \"updated_at\": \"{{$timestamp}}\"\n}"
+				},
+				"url": {
+					"raw": "{{SUPABASE_URL}}/rest/v1/gqr_entry?id=eq.{{GQR_ID}}",
+					"host": [
+						"{{SUPABASE_URL}}"
+					],
+					"path": [
+						"rest",
+						"v1",
+						"gqr_entry"
+					],
+					"query": [
+						{
+							"key": "id",
+							"value": "eq.{{GQR_ID}}"
+						}
+					]
+				},
+				"description": "Update the tally posted status for a specific GQR record"
+			}
+		},
+		{
+			"name": "Get GQR by ID",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "apikey",
+						"value": "{{SUPABASE_ANON_KEY}}",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{SUPABASE_ANON_KEY}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{SUPABASE_URL}}/rest/v1/gqr_entry?select=*,pre_gr_entry(id,vouchernumber,net_wt,ladden_wt,empty_wt,date,purchase_orders(id,vouchernumber,date,rate,podi_rate,quantity,damage_allowed_kgs_ton,cargo,suppliers(id,name),item_master(id,item_name,hsn_code,item_unit)))&id=eq.{{GQR_ID}}",
+					"host": [
+						"{{SUPABASE_URL}}"
+					],
+					"path": [
+						"rest",
+						"v1",
+						"gqr_entry"
+					],
+					"query": [
+						{
+							"key": "select",
+							"value": "*,pre_gr_entry(id,vouchernumber,net_wt,ladden_wt,empty_wt,date,purchase_orders(id,vouchernumber,date,rate,podi_rate,quantity,damage_allowed_kgs_ton,cargo,suppliers(id,name),item_master(id,item_name,hsn_code,item_unit)))"
+						},
+						{
+							"key": "id",
+							"value": "eq.{{GQR_ID}}"
+						}
+					]
+				},
+				"description": "Fetch a specific GQR record by ID"
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "SUPABASE_URL",
+			"value": "https://your-project.supabase.co",
+			"type": "string"
+		},
+		{
+			"key": "SUPABASE_ANON_KEY",
+			"value": "your-anon-key-here",
+			"type": "string"
+		},
+		{
+			"key": "GQR_ID",
+			"value": "123",
+			"type": "string"
+		}
+	]
+}

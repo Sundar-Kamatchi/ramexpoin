@@ -24,6 +24,8 @@ export default function GQRListPage() {
           total_value_received,
           pre_gr_entry (
             vouchernumber,
+            gr_no,
+            gr_dt,
             suppliers ( name )
           )
         `)
@@ -59,7 +61,7 @@ export default function GQRListPage() {
             <Button variant="primary">+ Create New GQR</Button>
           </Link>
           <Link href="/" passHref>
-            <Button variant="outline">Home</Button>
+            <Button variant="primary">Home</Button>
           </Link>
         </div>
       </div>
@@ -68,9 +70,10 @@ export default function GQRListPage() {
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase">GQR ID</th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase">GR NO</th>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase">GR DT</th>
               <th className="px-6 py-3 text-left text-xs font-medium uppercase">Pre-GR No.</th>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase">Date</th>
               <th className="px-6 py-3 text-left text-xs font-medium uppercase">Supplier</th>
               <th className="px-6 py-3 text-right text-xs font-medium uppercase">Final Value</th>
               <th className="px-6 py-3 text-right text-xs font-medium uppercase">Actions</th>
@@ -79,16 +82,17 @@ export default function GQRListPage() {
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200">
             {gqrEntries.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-8 text-center text-gray-400">
+                <td colSpan={7} className="px-6 py-8 text-center text-gray-400">
                   No GQRs found.
                 </td>
               </tr>
             ) : (
               gqrEntries.map((gqr) => (
                 <tr key={gqr.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                  <td className="px-6 py-4 font-medium">{gqr.id}</td>
-                  <td className="px-6 py-4">{formatDateDDMMYYYY(gqr.created_at)}</td>
+                  <td className="px-6 py-4 font-medium">{gqr.pre_gr_entry?.gr_no || 'N/A'}</td>
+                  <td className="px-6 py-4">{gqr.pre_gr_entry?.gr_dt ? formatDateDDMMYYYY(gqr.pre_gr_entry.gr_dt) : 'N/A'}</td>
                   <td className="px-6 py-4">{gqr.pre_gr_entry?.vouchernumber || 'N/A'}</td>
+                  <td className="px-6 py-4">{formatDateDDMMYYYY(gqr.created_at)}</td>
                   <td className="px-6 py-4">{gqr.pre_gr_entry?.suppliers?.name || 'N/A'}</td>
                   <td className="px-6 py-4 text-right font-semibold">
                     ₹{gqr.total_value_received?.toLocaleString('en-IN') || '0.00'}

@@ -5,16 +5,18 @@ import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { formatDateDDMMYYYY } from '@/utils/dateUtils';
+import DeleteButton from '@/components/DeleteButton';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function GQREditPage() {
   const router = useRouter();
   const params = useParams();
   const gqrId = params.id;
+  const { isAdmin } = useAuth();
   // --- State Management ---
   const [gqrData, setGqrData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
 
   // Editable form fields
   const [weights, setWeights] = useState({
@@ -35,19 +37,6 @@ export default function GQREditPage() {
       setLoading(true);
       setError(null);
       try {
-        let session = null;
-        let userIsAdmin = false;
-        
-        try {
-            const { data: { session: sessionData } } = await supabase.auth.getSession();
-            session = sessionData;
-            userIsAdmin = session?.user?.email?.startsWith('admin');
-        } catch (error) {
-            console.log('GQR Edit: Auth session missing, treating as non-admin');
-            userIsAdmin = false;
-        }
-        
-        setIsAdmin(userIsAdmin);
 
         // Try the RPC function first
         const { data: rpcData, error: rpcError } = await supabase.rpc('get_gqr_details_by_id', { p_gqr_id: gqrId });
@@ -75,6 +64,8 @@ export default function GQREditPage() {
                 net_wt,
                 ladden_wt,
                 empty_wt,
+                gr_no,
+                gr_dt,
                 purchase_orders (
                   id,
                   vouchernumber,
@@ -123,7 +114,9 @@ export default function GQREditPage() {
             damage_allowed_kgs_ton: directData.pre_gr_entry?.purchase_orders?.damage_allowed_kgs_ton || 0,
             
             // Pre-GR Details
-            pre_gr_vouchernumber: directData.pre_gr_entry?.vouchernumber || ''
+            pre_gr_vouchernumber: directData.pre_gr_entry?.vouchernumber || '',
+            gr_no: directData.pre_gr_entry?.gr_no || '',
+            gr_dt: directData.pre_gr_entry?.gr_dt || ''
           };
           
           setGqrData(fetchedData);
@@ -157,6 +150,8 @@ export default function GQREditPage() {
               cargo: fetchedData.cargo || fetchedData.pre_gr_entry?.purchase_orders?.cargo || 0,
               damage_allowed_kgs_ton: fetchedData.damage_allowed_kgs_ton || fetchedData.pre_gr_entry?.purchase_orders?.damage_allowed_kgs_ton || 0,
               pre_gr_vouchernumber: fetchedData.pre_gr_vouchernumber || fetchedData.pre_gr_entry?.vouchernumber || '',
+              gr_no: fetchedData.gr_no || fetchedData.pre_gr_entry?.gr_no || '',
+              gr_dt: fetchedData.gr_dt || fetchedData.pre_gr_entry?.gr_dt || '',
               // Calculate net weight if not provided by RPC
               net_wt: fetchedData.net_wt || (fetchedData.pre_gr_entry?.ladden_wt || 0) - (fetchedData.pre_gr_entry?.empty_wt || 0)
             };
@@ -252,7 +247,10 @@ export default function GQREditPage() {
   
   // --- Handlers ---
   const handleWeightChange = (field, unit, value) => {
-    setWeights(prev => ({ ...prev, [field]: { ...prev[field], kgs: value } }));
+    // Allow empty string or valid numbers (including decimals)
+    if (value === '' || !isNaN(value)) {
+      setWeights(prev => ({ ...prev, [field]: { ...prev[field], [unit]: value } }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -301,7 +299,7 @@ export default function GQREditPage() {
   return (
     <div className="container mx-auto p-4 md:p-6 space-y-6 mt-20">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Edit GQR (ID: {gqrId})</h1>
+        <h1 className="text-2xl font-bold">Edit GQR (GR NO: {gqrData?.gr_no || 'N/A'})</h1>
         <Button onClick={() => router.push('/gqr-list')} variant="secondary">Back to List</Button>
       </div>
 
@@ -338,31 +336,40 @@ export default function GQREditPage() {
             <div>
               <label className="text-sm font-medium">Rot (kg)</label>
               <input 
-                type="number" 
+                type="text"
+                inputMode="decimal"
+                pattern="[0-9]*\.?[0-9]*"
                 name="rot" 
                 value={weights.rot.kgs} 
                 onChange={(e) => handleWeightChange('rot', 'kgs', e.target.value)} 
                 className="w-full mt-1 p-2 border rounded"
+                placeholder="Enter rot weight"
               />
             </div>
             <div>
               <label className="text-sm font-medium">Sand/Debris (kg)</label>
               <input 
-                type="number" 
+                type="text"
+                inputMode="decimal"
+                pattern="[0-9]*\.?[0-9]*"
                 name="sand" 
                 value={weights.sand.kgs} 
                 onChange={(e) => handleWeightChange('sand', 'kgs', e.target.value)} 
                 className="w-full mt-1 p-2 border rounded"
+                placeholder="Enter sand/debris weight"
               />
             </div>
             <div>
               <label className="text-sm font-medium">Doubles (kg)</label>
               <input 
-                type="number" 
+                type="text"
+                inputMode="decimal"
+                pattern="[0-9]*\.?[0-9]*"
                 name="doubles" 
                 value={weights.doubles.kgs} 
                 onChange={(e) => handleWeightChange('doubles', 'kgs', e.target.value)} 
                 className="w-full mt-1 p-2 border rounded"
+                placeholder="Enter doubles weight"
               />
             </div>
           </div>
@@ -372,21 +379,27 @@ export default function GQREditPage() {
             <div>
               <label className="text-sm font-medium">Gap Items (kg)</label>
               <input 
-                type="number" 
+                type="text"
+                inputMode="decimal"
+                pattern="[0-9]*\.?[0-9]*"
                 name="gapItems" 
                 value={weights.gapItems.kgs} 
                 onChange={(e) => handleWeightChange('gapItems', 'kgs', e.target.value)} 
                 className="w-full mt-1 p-2 border rounded"
+                placeholder="Enter gap items weight"
               />
             </div>
             <div>
               <label className="text-sm font-medium">Podi (kg)</label>
               <input 
-                type="number" 
+                type="text"
+                inputMode="decimal"
+                pattern="[0-9]*\.?[0-9]*"
                 name="podi" 
                 value={weights.podi.kgs} 
                 onChange={(e) => handleWeightChange('podi', 'kgs', e.target.value)} 
                 className="w-full mt-1 p-2 border rounded"
+                placeholder="Enter podi weight"
               />
             </div>
           </div>
@@ -397,6 +410,7 @@ export default function GQREditPage() {
               <label className="text-sm font-medium">Damage Allowed %/Ton</label>
               <input 
                 type="number" 
+                step="any"
                 value={damageAllowedPercentPerTon.toFixed(2)} 
                 className="w-full mt-1 p-2 border rounded bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-200 cursor-not-allowed"
                 readOnly
@@ -407,6 +421,7 @@ export default function GQREditPage() {
               <label className="text-sm font-medium">Actual Wastage %/Ton</label>
               <input 
                 type="number" 
+                step="any"
                 value={actualWastagePerTon.toFixed(2)} 
                 className="w-full mt-1 p-2 border rounded bg-yellow-50 dark:bg-yellow-900/30 text-yellow-900 dark:text-yellow-100 font-semibold cursor-not-allowed border-yellow-200 dark:border-yellow-700"
                 readOnly
@@ -417,6 +432,7 @@ export default function GQREditPage() {
               <label className="text-sm font-medium">Total Wastage (kg)</label>
               <input 
                 type="number" 
+                step="any"
                 value={totalWastage} 
                 className="w-full mt-1 p-2 border rounded bg-red-50 dark:bg-red-900/30 text-red-900 dark:text-red-100 font-semibold cursor-not-allowed border-red-200 dark:border-red-700"
                 readOnly
@@ -430,6 +446,7 @@ export default function GQREditPage() {
               </label>
               <input 
                 type="number" 
+                step="any"
                 value={calculatedExportQuality} 
                 className="w-full mt-1 p-2 border rounded bg-blue-50 dark:bg-blue-900/30 text-blue-900 dark:text-blue-100 font-semibold cursor-not-allowed border-blue-200 dark:border-blue-700"
                 readOnly
@@ -439,25 +456,74 @@ export default function GQREditPage() {
           </div>
                  </div>
          
-         <div className="flex justify-end gap-4 mt-6">
-           {/* Cancel Button */}
-           <Button 
-             type="button" 
-             variant="secondary" 
-             onClick={() => router.push('/gqr-list')}
-             disabled={formSubmitting}
-           >
-             Cancel
-           </Button>
-           
-                       {/* Update Button */}
-            <Button 
-              type="submit" 
-              variant="primary" 
-              disabled={formSubmitting || gqrData.gqr_status === 'Finalized'}
-            >
-              {formSubmitting ? 'Saving...' : 'Update GQR'}
-            </Button>
+         <div className="flex justify-between items-center mt-6">
+           <div>
+             <DeleteButton
+               itemId={gqrId}
+               itemName={`GQR ${gqrId}`}
+               onDelete={async (gqrId) => {
+                 try {
+                   // First, get the pre_gr_id from the GQR entry before deleting
+                   const { data: gqrData, error: fetchError } = await supabase
+                     .from('gqr_entry')
+                     .select('pre_gr_id')
+                     .eq('id', gqrId)
+                     .single();
+                   
+                   if (fetchError) throw fetchError;
+                   
+                   // Delete the GQR entry
+                   const { error: deleteError } = await supabase
+                     .from('gqr_entry')
+                     .delete()
+                     .eq('id', gqrId);
+                   
+                   if (deleteError) throw deleteError;
+                   
+                   // Update the pre_gr_entry to set is_gqr_created = false
+                   if (gqrData.pre_gr_id) {
+                     const { error: updateError } = await supabase
+                       .from('pre_gr_entry')
+                       .update({ is_gqr_created: false })
+                       .eq('id', gqrData.pre_gr_id);
+                     
+                     if (updateError) {
+                       console.warn('Warning: Failed to update pre_gr_entry is_gqr_created flag:', updateError);
+                       // Don't throw error here as the main deletion was successful
+                     }
+                   }
+                   
+                   router.push('/gqr-list');
+                 } catch (error) {
+                   console.error('Error deleting GQR:', error);
+                   throw error;
+                 }
+               }}
+               isAdmin={isAdmin}
+               variant="destructive"
+               size="sm"
+             />
+           </div>
+           <div className="flex gap-4">
+             {/* Cancel Button */}
+             <Button 
+               type="button" 
+               variant="secondary" 
+               onClick={() => router.push('/gqr-list')}
+               disabled={formSubmitting}
+             >
+               Cancel
+             </Button>
+             
+             {/* Update Button */}
+              <Button 
+                type="submit" 
+                variant="primary" 
+                disabled={formSubmitting || gqrData.gqr_status === 'Finalized'}
+              >
+                {formSubmitting ? 'Saving...' : 'Update GQR'}
+              </Button>
+           </div>
          </div>
        </form>
     </div>
