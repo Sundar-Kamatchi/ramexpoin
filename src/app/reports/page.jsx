@@ -16,22 +16,132 @@ export default function ReportsPage() {
   const [error, setError] = useState(null);
   const [showDebugInfo, setShowDebugInfo] = useState(false);
 
+     // Helper function to get supplier names for GQRs - more direct approach
+   const getSupplierNamesForGQRs = async (gqrIds) => {
+     if (!gqrIds || gqrIds.length === 0) return {};
+     
+     try {
+       // First, get the pre_gr_entry IDs for these GQRs
+       const { data: gqrData, error: gqrError } = await supabase
+         .from('gqr_entry')
+         .select('id, pre_gr_entry_id')
+         .in('id', gqrIds);
+       
+       if (gqrError) {
+         console.error('Error fetching GQR pre_gr_entry_ids:', gqrError);
+         return {};
+       }
+       
+       const preGrIds = gqrData.map(g => g.pre_gr_entry_id).filter(Boolean);
+       if (preGrIds.length === 0) {
+         console.log('No pre_gr_entry_ids found for GQRs');
+         return {};
+       }
+       
+       // Then get the purchase order IDs for these pre_gr_entries
+       const { data: preGrData, error: preGrError } = await supabase
+         .from('pre_gr_entry')
+         .select('id, purchase_order_id')
+         .in('id', preGrIds);
+       
+       if (preGrError) {
+         console.error('Error fetching pre_gr_entry purchase_order_ids:', preGrError);
+         return {};
+       }
+       
+       const poIds = preGrData.map(p => p.purchase_order_id).filter(Boolean);
+       if (poIds.length === 0) {
+         console.log('No purchase_order_ids found for pre_gr_entries');
+         return {};
+       }
+       
+       // Finally get the supplier names for these purchase orders
+       const { data: poData, error: poError } = await supabase
+         .from('purchase_orders')
+         .select('id, supplier_id, cargo')
+         .in('id', poIds);
+       
+       if (poError) {
+         console.error('Error fetching purchase_orders supplier_ids:', poError);
+         return {};
+       }
+       
+       const supplierIds = poData.map(p => p.supplier_id).filter(Boolean);
+       if (supplierIds.length === 0) {
+         console.log('No supplier_ids found for purchase_orders');
+         return {};
+       }
+       
+       // Get supplier names
+       const { data: supplierData, error: supplierError } = await supabase
+         .from('suppliers')
+         .select('id, name')
+         .in('id', supplierIds);
+       
+       if (supplierError) {
+         console.error('Error fetching supplier names:', supplierError);
+         return {};
+       }
+       
+       // Create a map of purchase_order_id to supplier name and cargo
+       const poToSupplierMap = {};
+       poData.forEach(po => {
+         const supplier = supplierData.find(s => s.id === po.supplier_id);
+         if (supplier) {
+           poToSupplierMap[po.id] = {
+             name: supplier.name,
+             cargo: po.cargo
+           };
+         }
+       });
+       
+       // Create a map of pre_gr_entry_id to supplier info
+       const preGrToSupplierMap = {};
+       preGrData.forEach(preGr => {
+         const poInfo = poToSupplierMap[preGr.purchase_order_id];
+         if (poInfo) {
+           preGrToSupplierMap[preGr.id] = poInfo;
+         }
+       });
+       
+       // Create final map of GQR ID to supplier info
+       const supplierMap = {};
+       gqrData.forEach(gqr => {
+         const supplierInfo = preGrToSupplierMap[gqr.pre_gr_entry_id];
+         if (supplierInfo) {
+           supplierMap[gqr.id] = supplierInfo;
+         }
+       });
+       
+       console.log('Supplier mapping created:', supplierMap);
+       return supplierMap;
+     } catch (err) {
+       console.error('Error in getSupplierNamesForGQRs:', err);
+       return {};
+     }
+   };
+
   // Function to process supplier cargo data
   const processSupplierCargoData = (rawData) => {
     console.log('Processing raw data:', rawData);
     const supplierMap = new Map();
 
+    if (!rawData || !Array.isArray(rawData)) {
+      console.warn('Invalid raw data provided to processSupplierCargoData:', rawData);
+      return [];
+    }
+
     rawData.forEach(entry => {
       console.log('Processing entry:', entry);
       
-             // Handle different data structures
-       let supplierName = 'Unknown';
-       let committedCargo = 0;
-       let exportQualityWeight = entry.export_quality_weight || 0;
-       
-       // Calculate net weight from available fields if net_wt is missing
-       let netWeight = entry.net_wt || 0;
-       if (!netWeight && exportQualityWeight > 0) {
+      // Handle different data structures
+      let supplierName = 'Unknown';
+      let committedCargo = 0;
+      let exportQualityWeight = entry.export_quality_weight || 0;
+      
+             // Calculate net weight from available fields since net_wt column doesn't exist
+       let netWeight = 0;
+       if (exportQualityWeight > 0) {
          // Calculate net weight from export quality weight and wastage
          const wastageWeight = (entry.rot_weight || 0) + (entry.doubles_weight || 0) + 
                               (entry.sand_weight || 0) + (entry.gap_items_weight || 0) + 
@@ -39,23 +149,28 @@ export default function ReportsPage() {
          netWeight = exportQualityWeight + wastageWeight;
        }
 
-       // Try to get supplier info from nested structure
-       if (entry.pre_gr_entry?.purchase_orders?.suppliers?.name) {
+             // Try to get supplier info from nested structure
+       if (entry.supplierName) {
+         // Supplier name was added by the fallback logic
+         supplierName = entry.supplierName;
+         committedCargo = entry.committedCargo || entry.pre_gr_entry?.purchase_orders?.cargo || 85;
+       } else if (entry.pre_gr_entry?.purchase_orders?.suppliers?.name) {
          supplierName = entry.pre_gr_entry.purchase_orders.suppliers.name;
          committedCargo = entry.pre_gr_entry.purchase_orders.cargo || 0;
        } else if (entry.pre_gr_entry?.purchase_orders?.cargo) {
          committedCargo = entry.pre_gr_entry.purchase_orders.cargo;
+         supplierName = 'Supplier (No Name)';
        } else {
          // Fallback: Use a default supplier name and estimate committed cargo
-         supplierName = 'Default Supplier';
+         supplierName = 'Unknown Supplier';
          committedCargo = 85; // Default committed cargo percentage
        }
 
       console.log('Extracted data:', { supplierName, committedCargo, netWeight, exportQualityWeight });
 
-      if (netWeight > 0) {
-        const actualCargo = (exportQualityWeight / netWeight) * 100;
-        const variance = actualCargo - committedCargo;
+             if (netWeight > 0 && exportQualityWeight > 0) {
+         const actualCargo = (exportQualityWeight / netWeight) * 100;
+         const variance = actualCargo - committedCargo;
 
         if (supplierMap.has(supplierName)) {
           const existing = supplierMap.get(supplierName);
@@ -125,17 +240,28 @@ export default function ReportsPage() {
          console.log('Basic GQR data:', basicGqrData);
          console.log('Basic GQR error:', basicGqrError);
          
+         // Debug: Show available columns in the first GQR entry
+         if (basicGqrData && basicGqrData.length > 0) {
+           console.log('Available columns in GQR data:', Object.keys(basicGqrData[0]));
+           console.log('Sample GQR entry:', basicGqrData[0]);
+         }
+         
          // Store basic GQR data for debugging
          setBasicGqrData(basicGqrData || []);
          console.log('Basic GQR data stored, length:', (basicGqrData || []).length);
          
-         // Fetch supplier cargo analysis data from GQR - using optional joins
+         // Fetch supplier cargo analysis data from GQR - using only existing columns
          const { data: cargoData, error: cargoError } = await supabase
            .from('gqr_entry')
            .select(`
              id,
              export_quality_weight,
-             net_wt,
+             rot_weight,
+             doubles_weight,
+             sand_weight,
+             gap_items_weight,
+             podi_weight,
+             total_wastage_weight,
              pre_gr_entry (
                id,
                vouchernumber,
@@ -156,16 +282,121 @@ export default function ReportsPage() {
          console.log('Cargo error type:', typeof cargoError);
          console.log('Cargo error keys:', cargoError ? Object.keys(cargoError) : 'No error');
          
+         // Debug: Show sample of the data structure
+         if (cargoData && cargoData.length > 0) {
+           console.log('Sample cargo data entry:', cargoData[0]);
+           console.log('Sample pre_gr_entry:', cargoData[0]?.pre_gr_entry);
+           console.log('Sample purchase_orders:', cargoData[0]?.pre_gr_entry?.purchase_orders);
+           console.log('Sample suppliers:', cargoData[0]?.pre_gr_entry?.purchase_orders?.suppliers);
+         }
+         
          // Store raw data for debugging
          setRawCargoData(cargoData || []);
 
-                 if (cargoError) {
+         if (cargoError) {
            console.error('Failed to fetch cargo data:', cargoError);
+           console.error('Error details:', {
+             message: cargoError?.message || 'No message',
+             details: cargoError?.details || 'No details',
+             hint: cargoError?.hint || 'No hint',
+             code: cargoError?.code || 'No code',
+             error: cargoError
+           });
            
-           // Fallback: Process the basic GQR data we already have
-           console.log('Processing basic GQR data as fallback due to error...');
-           const processedData = processSupplierCargoData(basicGqrData || []);
+           // Try a simpler fallback query that still includes supplier info
+           console.log('Trying simpler fallback query with supplier info...');
+           try {
+             const { data: simpleData, error: simpleError } = await supabase
+               .from('gqr_entry')
+               .select(`
+                 id,
+                 export_quality_weight,
+                 rot_weight,
+                 doubles_weight,
+                 sand_weight,
+                 gap_items_weight,
+                 podi_weight,
+                 total_wastage_weight,
+                 pre_gr_entry (
+                   id,
+                   vouchernumber,
+                   purchase_orders (
+                     id,
+                     cargo,
+                     suppliers (
+                       id,
+                       name
+                     )
+                   )
+                 )
+               `);
+             
+                            if (simpleError) {
+                 console.error('Simple fallback query also failed:', simpleError);
+                 console.error('Simple error details:', {
+                   message: simpleError?.message || 'No message',
+                   details: simpleError?.details || 'No details',
+                   hint: simpleError?.hint || 'No hint',
+                   code: simpleError?.code || 'No code',
+                   error: simpleError
+                 });
+               // Try an even simpler approach - get supplier info separately
+               console.log('Trying to fetch supplier info separately...');
+               try {
+                                    const { data: supplierData, error: supplierError } = await supabase
+                     .from('gqr_entry')
+                     .select(`
+                       id,
+                       export_quality_weight,
+                       rot_weight,
+                       doubles_weight,
+                       sand_weight,
+                       gap_items_weight,
+                       podi_weight,
+                       total_wastage_weight
+                     `);
+                 
+                                    if (supplierError) {
+                     console.error('Supplier query failed:', supplierError);
+                     console.error('Supplier error details:', {
+                       message: supplierError?.message || 'No message',
+                       details: supplierError?.details || 'No details',
+                       hint: supplierError?.hint || 'No hint',
+                       code: supplierError?.code || 'No code',
+                       error: supplierError
+                     });
+                   const processedData = processSupplierCargoData(basicGqrData || []);
+                   setSupplierCargoData(processedData);
+                          } else {
+           // Try to get supplier names from a separate query
+           const supplierInfo = await getSupplierNamesForGQRs(supplierData.map(g => g.id));
+           const enrichedData = supplierData.map(gqr => {
+             const info = supplierInfo[gqr.id];
+             return {
+               ...gqr,
+               supplierName: info ? info.name : 'Unknown Supplier',
+               committedCargo: info ? info.cargo : 85
+             };
+           });
+           const processedData = processSupplierCargoData(enrichedData);
            setSupplierCargoData(processedData);
+         }
+               } catch (supplierErr) {
+                 console.error('Supplier fallback failed:', supplierErr);
+                 const processedData = processSupplierCargoData(basicGqrData || []);
+                 setSupplierCargoData(processedData);
+               }
+             } else {
+               console.log('Simple fallback query succeeded, processing data...');
+               const processedData = processSupplierCargoData(simpleData || []);
+               setSupplierCargoData(processedData);
+             }
+           } catch (fallbackErr) {
+             console.error('Fallback query failed:', fallbackErr);
+             // Use basic GQR data as final fallback
+             const processedData = processSupplierCargoData(basicGqrData || []);
+             setSupplierCargoData(processedData);
+           }
          } else if (!cargoData || cargoData.length === 0) {
            // No error but no data - use fallback
            console.log('No cargo data returned, using basic GQR data as fallback...');
@@ -174,11 +405,48 @@ export default function ReportsPage() {
          } else {
            // Process the data to calculate supplier performance
            console.log('Processing joined cargo data...');
-           const processedData = processSupplierCargoData(cargoData || []);
-           setSupplierCargoData(processedData);
+           
+           // Filter data to only include entries with complete supplier information
+           const completeData = cargoData.filter(entry => 
+             entry.pre_gr_entry?.purchase_orders?.suppliers?.name &&
+             entry.pre_gr_entry?.purchase_orders?.cargo
+           );
+           
+           console.log('Complete data entries:', completeData.length);
+           console.log('Incomplete data entries:', cargoData.length - completeData.length);
+           
+           if (completeData.length > 0) {
+             const processedData = processSupplierCargoData(completeData);
+             setSupplierCargoData(processedData);
+           } else {
+             console.log('No complete data found, trying to enrich basic GQR data with supplier info...');
+             // Try to get supplier info for basic GQR data
+             try {
+               const supplierInfo = await getSupplierNamesForGQRs(basicGqrData.map(g => g.id));
+               const enrichedData = basicGqrData.map(gqr => {
+                 const info = supplierInfo[gqr.id];
+                 return {
+                   ...gqr,
+                   supplierName: info ? info.name : 'Unknown Supplier',
+                   committedCargo: info ? info.cargo : 85
+                 };
+               });
+               const processedData = processSupplierCargoData(enrichedData);
+               setSupplierCargoData(processedData);
+             } catch (enrichErr) {
+               console.error('Failed to enrich basic GQR data:', enrichErr);
+               const processedData = processSupplierCargoData(basicGqrData || []);
+               setSupplierCargoData(processedData);
+             }
+           }
          }
       } catch (err) {
-        setError('Failed to fetch report data: ' + err.message);
+        console.error('Reports page error:', {
+          message: err.message,
+          stack: err.stack,
+          name: err.name
+        });
+        setError('Failed to fetch report data: ' + (err.message || 'Unknown error'));
       } finally {
         setLoading(false);
       }

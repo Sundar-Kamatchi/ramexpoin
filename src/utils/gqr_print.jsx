@@ -6,7 +6,7 @@ export const GQRPrint = ({ gqrData, actualCalculations, actualValues, estimatedC
     return <div className="p-8 text-center">Loading print data...</div>;
   }
   
-  const totalWastage = (gqrData.rot_weight || 0) + (gqrData.doubles_weight || 0) + (gqrData.sand_weight || 0);
+  const totalWastage = (gqrData.rot_weight || 0) + (gqrData.doubles_weight || 0) + (gqrData.sand_weight || 0) + (gqrData.weight_shortage_weight || 0);
   const finalRate = (gqrData.volatile_po_rate ?? gqrData.rate) ?? 0;
   const finalWastage = (gqrData.volatile_wastage_kgs_per_ton ?? adjustableDamageAllowed) ?? 0;
   const netWt = Number(actualCalculations?.totalCargo || 0);
@@ -31,7 +31,7 @@ export const GQRPrint = ({ gqrData, actualCalculations, actualValues, estimatedC
           <div className="grid grid-cols-2 gap-x-4">
             <span><strong>Item:</strong> {gqrData.item_name || 'N/A'}</span>
             <span><strong>Supplier:</strong> {gqrData.supplier_name}</span>
-            <span><strong>GQR ID:</strong> {gqrData.id} / {formatDateDDMMYYYY(gqrData.created_at)}</span>
+            <span><strong>GR No:</strong> {gqrData.vouchernumber} / {formatDateDDMMYYYY(gqrData.pre_gr_date || gqrData.created_at)}</span>
             <span><strong>PO Rate:</strong> ₹{gqrData.rate?.toFixed(2) || '0.00'}</span>
             <span><strong>Podi Rate:</strong> ₹{gqrData.podi_rate?.toFixed(2) || '0.00'}</span>
             <span><strong>Wastage Allowed:</strong> {gqrData.damage_allowed_kgs_ton || 'N/A'} kgs/ton</span>
@@ -44,8 +44,8 @@ export const GQRPrint = ({ gqrData, actualCalculations, actualValues, estimatedC
           <div className="grid grid-cols-2 gap-x-2">
             <span><strong>Supplier:</strong></span>
             <span>{gqrData.supplier_name || 'N/A'}</span>
-            <span><strong>GQR No:</strong></span>
-            <span>{gqrData.id ?? 'N/A'}</span>
+            <span><strong>GR No:</strong></span>
+            <span>{gqrData.vouchernumber ?? 'N/A'}</span>
             <span><strong>Final Rate:</strong></span>
             <span>₹{Number(finalRate).toFixed(2)}</span>
             <span><strong>Final Wastage:</strong></span>
@@ -77,6 +77,7 @@ export const GQRPrint = ({ gqrData, actualCalculations, actualValues, estimatedC
           <div><strong>ROT:</strong> {gqrData.rot_weight || 0}</div>
           <div><strong>Doubles:</strong> {gqrData.doubles_weight || 0}</div>
           <div><strong>Sand:</strong> {gqrData.sand_weight || 0}</div>
+          <div><strong>Weight Shortage:</strong> {gqrData.weight_shortage_weight || 0}</div>
         </div>
       </div>
 
@@ -97,16 +98,16 @@ export const GQRPrint = ({ gqrData, actualCalculations, actualValues, estimatedC
             <tr>
               <td className="border border-black p-0 px-1 py-1 font-semibold">TOTAL RATE AFTER PODI & GAP ITEMS PKG</td>
               <td className="border border-black p-0 px-1 py-1 text-center">₹{estimatedCalculations.totalCargoAfterPodiRate.toFixed(2)}</td>
-              <td className="border border-black p-0 px-1 py-1 text-center">₹{(((actualCalculations.totalCargo * actualValues.ratePerKg) - ((actualCalculations.podiKgs + actualCalculations.gapKgs) * actualValues.podiRatePerKg)) / 16375).toFixed(2)}</td>
-              <td className="border border-black p-0 px-1 py-1 text-center">₹{(estimatedCalculations.totalCargoAfterPodiRate - (((actualCalculations.totalCargo * actualValues.ratePerKg) - ((actualCalculations.podiKgs + actualCalculations.gapKgs) * actualValues.podiRatePerKg)) / 16375)).toFixed(2)}</td>
+              <td className="border border-black p-0 px-1 py-1 text-center">₹{actualCalculations.totalCargoAfterPodiAndGapRate.toFixed(2)}</td>
+              <td className="border border-black p-0 px-1 py-1 text-center">₹{(estimatedCalculations.totalCargoAfterPodiRate - actualCalculations.totalCargoAfterPodiAndGapRate).toFixed(2)}</td>
               <td className="border border-black p-0 px-1 py-1 text-center">-</td>
             </tr>
             <tr>
               <td className="border border-black p-0 px-1 py-1 font-semibold">TOTAL RATE AFTER PODI & GAP ITEMS PMT</td>
               <td className="border border-black p-0 px-1 py-1 text-center">₹{(estimatedCalculations.totalCargoAfterPodiRate * 1000).toFixed(2)}</td>
-              <td className="border border-black p-0 px-1 py-1 text-center">₹{((((actualCalculations.totalCargo * actualValues.ratePerKg) - ((actualCalculations.podiKgs + actualCalculations.gapKgs) * actualValues.podiRatePerKg)) / 16375) * 1000).toFixed(2)}</td>
-              <td className="border border-black p-0 px-1 py-1 text-center">₹{Math.round((estimatedCalculations.totalCargoAfterPodiRate * 1000) - ((((actualCalculations.totalCargo * actualValues.ratePerKg) - ((actualCalculations.podiKgs + actualCalculations.gapKgs) * actualValues.podiRatePerKg)) / 16375) * 1000))}</td>
-              <td className="border border-black p-0 px-1 py-1 text-center">₹{Math.round((16375 * ((estimatedCalculations.totalCargoAfterPodiRate * 1000) - ((((actualCalculations.totalCargo * actualValues.ratePerKg) - ((actualCalculations.podiKgs + actualCalculations.gapKgs) * actualValues.podiRatePerKg)) / 16375) * 1000))) / 1000).toFixed(2)}</td>
+              <td className="border border-black p-0 px-1 py-1 text-center">₹{(actualCalculations.totalCargoAfterPodiAndGapRate * 1000).toFixed(2)}</td>
+              <td className="border border-black p-0 px-1 py-1 text-center">₹{Math.round((estimatedCalculations.totalCargoAfterPodiRate * 1000) - (actualCalculations.totalCargoAfterPodiAndGapRate * 1000))}</td>
+              <td className="border border-black p-0 px-1 py-1 text-center">₹{Math.round((actualCalculations.totalCargoAfterPodiAndGapKgs * ((estimatedCalculations.totalCargoAfterPodiRate * 1000) - (actualCalculations.totalCargoAfterPodiAndGapRate * 1000))) / 1000).toFixed(2)}</td>
             </tr>
             <tr>
               <td className="border border-black p-0 px-1 py-1 font-semibold">PODI & CARGO ITEMS %</td>
@@ -120,7 +121,7 @@ export const GQRPrint = ({ gqrData, actualCalculations, actualValues, estimatedC
               <td className="border border-black p-0 px-1 text-center">{gqrData.volatile_wastage_kgs_per_ton || adjustableDamageAllowed}</td>
               <td className="border border-black p-0 px-1 text-center">{Math.round(actualCalculations.totalCargo > 0 ? ((actualCalculations.wastageKgs / actualCalculations.totalCargo) * 1000) : 0)}</td>
               <td className="border border-black p-0 px-1 text-center">-{Math.abs(Math.round((gqrData.volatile_wastage_kgs_per_ton || adjustableDamageAllowed) - (actualCalculations.totalCargo > 0 ? ((actualCalculations.wastageKgs / actualCalculations.totalCargo) * 1000) : 0)))}</td>
-              <td className="border border-black p-0 px-1 text-center">₹{(Math.round((gqrData.volatile_wastage_kgs_per_ton || adjustableDamageAllowed) - (actualCalculations.totalCargo > 0 ? ((actualCalculations.wastageKgs / actualCalculations.totalCargo) * 1000) : 0)) * (actualCalculations.totalCargo / 1000) * (((actualCalculations.totalCargo * actualValues.ratePerKg) - ((actualCalculations.podiKgs + actualCalculations.gapKgs) * actualValues.podiRatePerKg)) / 16375)).toFixed(2)}</td>
+              <td className="border border-black p-0 px-1 text-center">₹{(Math.round((gqrData.volatile_wastage_kgs_per_ton || adjustableDamageAllowed) - (actualCalculations.totalCargo > 0 ? ((actualCalculations.wastageKgs / actualCalculations.totalCargo) * 1000) : 0)) * (actualCalculations.totalCargo / 1000) * actualCalculations.totalCargoAfterPodiAndGapRate).toFixed(2)}</td>
             </tr>
             <tr>
               <td className="border border-black p-0 px-1 py-1 font-semibold">WASTAGE %</td>
@@ -134,7 +135,7 @@ export const GQRPrint = ({ gqrData, actualCalculations, actualValues, estimatedC
               <td className="border border-black p-1 py-1 text-center font-bold">-</td>
               <td className="border border-black p-1 py-1 text-center font-bold">-</td>
               <td className="border border-black p-1 py-1 text-center font-bold">-</td>
-              <td className="border border-black p-1 py-1 text-center font-bold">₹{(Math.round((16375 * ((estimatedCalculations.totalCargoAfterPodiRate * 1000) - ((((actualCalculations.totalCargo * actualValues.ratePerKg) - ((actualCalculations.podiKgs + actualCalculations.gapKgs) * actualValues.podiRatePerKg)) / 16375) * 1000))) / 1000) + (Math.round((gqrData.volatile_wastage_kgs_per_ton || adjustableDamageAllowed) - (actualCalculations.totalCargo > 0 ? ((actualCalculations.wastageKgs / actualCalculations.totalCargo) * 1000) : 0)) * (actualCalculations.totalCargo / 1000) * (((actualCalculations.totalCargo * actualValues.ratePerKg) - ((actualCalculations.podiKgs + actualCalculations.gapKgs) * actualValues.podiRatePerKg)) / 16375))).toFixed(2)}</td>
+              <td className="border border-black p-1 py-1 text-center font-bold">₹{(Math.round((actualCalculations.totalCargoAfterPodiAndGapKgs * ((estimatedCalculations.totalCargoAfterPodiRate * 1000) - (actualCalculations.totalCargoAfterPodiAndGapRate * 1000))) / 1000) + (Math.round((gqrData.volatile_wastage_kgs_per_ton || adjustableDamageAllowed) - (actualCalculations.totalCargo > 0 ? ((actualCalculations.wastageKgs / actualCalculations.totalCargo) * 1000) : 0)) * (actualCalculations.totalCargo / 1000) * actualCalculations.totalCargoAfterPodiAndGapRate)).toFixed(2)}</td>
             </tr>
           </tbody>
         </table>

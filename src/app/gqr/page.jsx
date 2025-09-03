@@ -123,7 +123,7 @@ export default function GQRCreatePage() {
             po_rate: entry.purchase_orders?.rate || 0,
             po_quantity: entry.purchase_orders?.quantity || 0,
             podi_rate: entry.purchase_orders?.podi_rate || 0,
-            damage_allowed: entry.purchase_orders?.damage_allowed_kgs_ton || 0,
+                         damage_allowed: entry.purchase_orders?.damage_allowed_kgs_ton || 0,
             cargo: entry.purchase_orders?.cargo || 0,
             remarks: entry.remarks || '',
             gr_no: entry.gr_no || '',
@@ -203,13 +203,20 @@ const handleSelectPreGR = (entry) => {
   };
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('=== GQR SUBMIT START ===');
+    console.log('Form validation check...');
+    
     if (!calculatedValues || calculatedValues.weightDifference < -0.01) {
       setError("Validation Error: Total accounted weight cannot exceed the Pre-GR Net Weight.");
+      console.log('Validation failed:', { calculatedValues, weightDifference: calculatedValues?.weightDifference });
       return;
     }
+    
+    console.log('Validation passed, starting submission...');
     setFormSubmitting(true);
     setError(null);
     setFormSuccess(null);
+    
     try {
       // Calculate the updated net_wt (original net_wt minus total deductions)
       const totalDeductions = parseFloat(deductionWeights.rot.kgs) || 0 + 
@@ -217,8 +224,19 @@ const handleSelectPreGR = (entry) => {
                              parseFloat(deductionWeights.sand.kgs) || 0 + 
                              parseFloat(deductionWeights.weightShortage.kgs) || 0;
       const updatedNetWt = selectedPreGR.net_wt - totalDeductions;
+      
+      console.log('Calculated values:', {
+        totalDeductions,
+        updatedNetWt,
+        selectedPreGR: selectedPreGR.pre_gr_id,
+        calculatedExportData,
+        calculatedValues,
+        deductionWeights,
+        finalBagCounts
+      });
 
-      const { error: rpcError } = await supabase.rpc('create_gqr_and_update_pre_gr', {
+      console.log('Calling RPC function...');
+      const { data: rpcData, error: rpcError } = await supabase.rpc('create_gqr_and_update_pre_gr', {
           p_pre_gr_id: selectedPreGR.pre_gr_id,
           p_export_quality_weight: calculatedExportData.exportKgs,
           p_rot_weight: parseFloat(deductionWeights.rot.kgs) || 0,
@@ -234,9 +252,14 @@ const handleSelectPreGR = (entry) => {
           p_final_gap_item2_bags: parseInt(finalBagCounts.gap_item2_bags) || 0
         });
 
-      if (rpcError) throw rpcError;
+      console.log('RPC response:', { rpcData, rpcError });
 
-      
+      if (rpcError) {
+        console.error('RPC Error details:', rpcError);
+        throw rpcError;
+      }
+
+      console.log('GQR created successfully!');
       setFormSuccess('GQR created successfully! Returning to list...');
       setTimeout(() => {
         setPreGREntries(prev => prev.filter(entry => entry.pre_gr_id !== selectedPreGR.pre_gr_id));
@@ -245,9 +268,15 @@ const handleSelectPreGR = (entry) => {
       }, 2500);
 
     } catch (err) {
+      console.error("=== SUBMIT ERROR ===");
+      console.error("Error type:", typeof err);
+      console.error("Error message:", err.message);
+      console.error("Error details:", err);
+      console.error("Error stack:", err.stack);
+      
       setError('Failed to create GQR: ' + err.message);
-      console.error("Submit Error:", err);
     } finally {
+      console.log('Setting formSubmitting to false');
       setFormSubmitting(false);
     }
   };
@@ -305,9 +334,19 @@ const handleSelectPreGR = (entry) => {
       ) : (
         // --- View 2: GQR Form ---
         <div className="space-y-6">
-          <h1 className="text-2xl font-bold">GQR Entry</h1>
-          {formSuccess && <div className="bg-green-100 text-green-700 p-4 rounded-md">{formSuccess}</div>}
-          {error && <div className="bg-red-100 text-red-700 p-4 rounded-md">{error}</div>}
+                     <h1 className="text-2xl font-bold">GQR Entry</h1>
+           {formSuccess && <div className="bg-green-100 text-green-700 p-4 rounded-md">{formSuccess}</div>}
+           {error && <div className="bg-red-100 text-red-700 p-4 rounded-md">{error}</div>}
+           
+           {/* Debug Information */}
+           <div className="bg-yellow-100 p-4 rounded-md text-sm">
+             <strong>Debug Info:</strong><br/>
+             Form Submitting: {formSubmitting ? 'YES' : 'NO'}<br/>
+             Calculated Values: {calculatedValues ? 'Available' : 'NULL'}<br/>
+             Weight Difference: {calculatedValues?.weightDifference?.toFixed(2) || 'N/A'}<br/>
+             Export Kgs: {calculatedExportData?.exportKgs?.toFixed(2) || 'N/A'}<br/>
+             Selected Pre-GR ID: {selectedPreGR?.pre_gr_id || 'N/A'}
+           </div>
 
           {/* 1. Purchase Order Details Section */}
           <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow">

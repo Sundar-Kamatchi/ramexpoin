@@ -6,6 +6,8 @@ import { supabase } from '@/lib/supabaseClient'; // Ensure this path is correct
 import { UserGroupIcon, PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import  AddUserModal from '@/components/AddUserModal';
 import EditUserModal from '@/components/EditUserModal';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 export default function UserManagement() {
   const { isAdmin, loading: authLoading } = useAuth();
@@ -145,13 +147,18 @@ export default function UserManagement() {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">All Users</h2>
-          <button 
+          <Button 
+            variant="primary"
             onClick={() => setIsAddUserModalOpen(true)} 
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
           >
             <PlusIcon className="h-5 w-5 mr-2" />
             Add User
-          </button>
+          </Button>
+          <Link href="/" passHref>
+            <Button variant="primary">Home</Button>
+          </Link>
+
         </div>
         
         {isLoading ? (

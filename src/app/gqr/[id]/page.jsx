@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { formatDateDDMMYYYY } from '@/utils/dateUtils';
 import DeleteButton from '@/components/DeleteButton';
 import { useAuth } from '@/hooks/use-auth';
+import { toast } from 'sonner';
 
 export default function GQREditPage() {
   const router = useRouter();
@@ -21,7 +22,7 @@ export default function GQREditPage() {
   // Editable form fields
   const [weights, setWeights] = useState({
     exportQuality: { kgs: '' }, rot: { kgs: '' }, doubles: { kgs: '' },
-    sand: { kgs: '' }, gapItems: { kgs: '' }, podi: { kgs: '' },
+    sand: { kgs: '' }, weightShortage: { kgs: '' }, gapItems: { kgs: '' }, podi: { kgs: '' },
   });
   const [finalBagCounts, setFinalBagCounts] = useState({
     podi_bags: '', gap_item1_bags: '', gap_item2_bags: '',
@@ -29,6 +30,11 @@ export default function GQREditPage() {
   // Submission status
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState(null);
+  
+  // Reverse status confirmation
+  const [showReverseConfirm, setShowReverseConfirm] = useState(false);
+  const [reverseConfirmStep, setReverseConfirmStep] = useState(1);
+  const [reverseSubmitting, setReverseSubmitting] = useState(false);
   
   // --- Data Fetching ---
   useEffect(() => {
@@ -57,7 +63,8 @@ export default function GQREditPage() {
               doubles_weight,
               sand_weight,
               gap_items_weight,
-              weight_shortage,
+              weight_shortage_weight,
+              gqr_status,
               pre_gr_entry (
                 id,
                 vouchernumber,
@@ -97,8 +104,9 @@ export default function GQREditPage() {
             doubles_weight: directData.doubles_weight || 0,
             sand_weight: directData.sand_weight || 0,
             gap_items_weight: directData.gap_items_weight || 0,
+            gqr_status: directData.gqr_status || 'Open',
 
-            weight_shortage: directData.weight_shortage || 0,
+            weight_shortage: directData.weight_shortage_weight || 0,
             po_rate: directData.pre_gr_entry?.purchase_orders?.rate || 0,
             podi_rate: directData.pre_gr_entry?.purchase_orders?.podi_rate || 0,
             net_wt: (directData.pre_gr_entry?.ladden_wt || 0) - (directData.pre_gr_entry?.empty_wt || 0),
@@ -120,14 +128,16 @@ export default function GQREditPage() {
           };
           
           setGqrData(fetchedData);
-          setWeights({
+          setWeights(prev => ({
+            ...prev,
             exportQuality: { kgs: fetchedData.export_quality_weight || '' },
             rot: { kgs: fetchedData.rot_weight || '' },
             doubles: { kgs: fetchedData.doubles_weight || '' },
             sand: { kgs: fetchedData.sand_weight || '' },
+            weightShortage: { kgs: fetchedData.weight_shortage || '' },
             gapItems: { kgs: fetchedData.gap_items_weight || '' },
             podi: { kgs: fetchedData.podi_weight || '' },
-          });
+          }));
           setFinalBagCounts({
             podi_bags: '',
             gap_item1_bags: '',
@@ -157,14 +167,16 @@ export default function GQREditPage() {
             };
             
             setGqrData(completeData);
-            setWeights({
+            setWeights(prev => ({
+              ...prev,
               exportQuality: { kgs: fetchedData.export_quality_weight || '' },
               rot: { kgs: fetchedData.rot_weight || '' },
               doubles: { kgs: fetchedData.doubles_weight || '' },
               sand: { kgs: fetchedData.sand_weight || '' },
+              weightShortage: { kgs: fetchedData.weight_shortage_weight || '' },
               gapItems: { kgs: fetchedData.gap_items_weight || '' },
               podi: { kgs: fetchedData.podi_weight || '' },
-            });
+            }));
             setFinalBagCounts({
               podi_bags: '',
               gap_item1_bags: '',
@@ -187,20 +199,21 @@ export default function GQREditPage() {
 
   // --- Memoized Calculations ---
   const calculatedValues = useMemo(() => {
-    if (!gqrData) return { totalValueReceived: 0, totalWastage: 0, actualYield: 0, totalWastagePercentage: 0 };
+    if (!gqrData || !weights) return { totalValueReceived: 0, totalWastage: 0, actualYield: 0, totalWastagePercentage: 0 };
     
     const parse = (val) => parseFloat(val) || 0;
-    const exportKgs = parse(weights.exportQuality.kgs);
-    const gapKgs = parse(weights.gapItems.kgs);
-    const podiKgs = parse(weights.podi.kgs);
-    const rotKgs = parse(weights.rot.kgs);
-    const doublesKgs = parse(weights.doubles.kgs);
-    const sandKgs = parse(weights.sand.kgs);
+    const exportKgs = parse(weights.exportQuality?.kgs);
+    const gapKgs = parse(weights.gapItems?.kgs);
+    const podiKgs = parse(weights.podi?.kgs);
+    const rotKgs = parse(weights.rot?.kgs);
+    const doublesKgs = parse(weights.doubles?.kgs);
+    const sandKgs = parse(weights.sand?.kgs);
+    const weightShortageKgs = parse(weights.weightShortage?.kgs);
 
     const poRate = gqrData.po_rate || 0;
     const podiRate = gqrData.podi_rate || 0;
 
-    const totalWastage = rotKgs + doublesKgs + sandKgs;
+    const totalWastage = rotKgs + doublesKgs + sandKgs + weightShortageKgs;
     const totalValueReceived = (exportKgs * poRate) + (gapKgs * poRate) + (podiKgs * podiRate);
     const actualYield = gqrData.net_wt > 0 ? (exportKgs / gqrData.net_wt) * 100 : 0;
     const totalWastagePercentage = gqrData.net_wt > 0 ? (totalWastage / gqrData.net_wt) * 100 : 0;
@@ -210,13 +223,16 @@ export default function GQREditPage() {
 
   // Calculate total wastage
   const totalWastage = useMemo(() => {
-    const rotKgs = parseFloat(weights.rot.kgs) || 0;
-    const sandKgs = parseFloat(weights.sand.kgs) || 0;
-    const doublesKgs = parseFloat(weights.doubles.kgs) || 0;
-    const gapItemsKgs = parseFloat(weights.gapItems.kgs) || 0;
-    const podiKgs = parseFloat(weights.podi.kgs) || 0;
+    if (!weights) return 0;
     
-    return rotKgs + sandKgs + doublesKgs + gapItemsKgs + podiKgs;
+    const rotKgs = parseFloat(weights.rot?.kgs) || 0;
+    const sandKgs = parseFloat(weights.sand?.kgs) || 0;
+    const doublesKgs = parseFloat(weights.doubles?.kgs) || 0;
+    const weightShortageKgs = parseFloat(weights.weightShortage?.kgs) || 0;
+    const gapItemsKgs = parseFloat(weights.gapItems?.kgs) || 0;
+    const podiKgs = parseFloat(weights.podi?.kgs) || 0;
+    
+    return rotKgs + sandKgs + doublesKgs + weightShortageKgs + gapItemsKgs + podiKgs;
   }, [weights]);
 
   // Calculate damage allowed percentage per ton
@@ -287,6 +303,60 @@ export default function GQREditPage() {
     }
   };
 
+  // Handle reverse status confirmation
+  const handleReverseStatus = () => {
+    if (reverseConfirmStep === 1) {
+      setReverseConfirmStep(2);
+      toast.warning('⚠️ Second confirmation required!', {
+        description: 'Click "CONFIRM REVERSE" again to proceed with reversing the GQR status.',
+        duration: 5000,
+      });
+    } else {
+      executeReverseStatus();
+    }
+  };
+
+  // Execute the actual status reversal
+  const executeReverseStatus = async () => {
+    setReverseSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from('gqr_entry')
+        .update({ gqr_status: 'Open' })
+        .eq('id', gqrId);
+
+      if (error) throw error;
+
+      toast.success('✅ GQR Status Reversed Successfully!', {
+        description: 'GQR status has been changed from "Closed" to "Open". You can now edit the GQR.',
+        duration: 5000,
+      });
+
+      // Refresh the page data
+      window.location.reload();
+      
+    } catch (err) {
+      toast.error('❌ Failed to Reverse GQR Status', {
+        description: `Error: ${err.message}`,
+        duration: 5000,
+      });
+    } finally {
+      setReverseSubmitting(false);
+      setShowReverseConfirm(false);
+      setReverseConfirmStep(1);
+    }
+  };
+
+  // Cancel reverse confirmation
+  const cancelReverseConfirm = () => {
+    setShowReverseConfirm(false);
+    setReverseConfirmStep(1);
+    toast.info('ℹ️ Status reversal cancelled', {
+      description: 'GQR status remains unchanged.',
+      duration: 3000,
+    });
+  };
+
 
   
   // --- Render Logic ---
@@ -299,7 +369,24 @@ export default function GQREditPage() {
   return (
     <div className="container mx-auto p-4 md:p-6 space-y-6 mt-20">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Edit GQR (GR NO: {gqrData?.gr_no || 'N/A'})</h1>
+        <div>
+          <h1 className="text-2xl font-bold">Edit GQR (GR NO: {gqrData?.gr_no || 'N/A'})</h1>
+          {gqrData.gqr_status === 'Closed' && (
+            <div className="mt-2 flex items-center gap-3">
+              <div className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium inline-block">
+                🔒 GQR Finalized - Read Only
+              </div>
+              {isAdmin && (
+                <button
+                  onClick={() => setShowReverseConfirm(true)}
+                  className="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm font-medium hover:bg-orange-200 transition-colors"
+                >
+                  🔄 Reverse Status (Admin Only)
+                </button>
+              )}
+            </div>
+          )}
+        </div>
         <Button onClick={() => router.push('/gqr-list')} variant="secondary">Back to List</Button>
       </div>
 
@@ -344,6 +431,7 @@ export default function GQREditPage() {
                 onChange={(e) => handleWeightChange('rot', 'kgs', e.target.value)} 
                 className="w-full mt-1 p-2 border rounded"
                 placeholder="Enter rot weight"
+                disabled={gqrData.gqr_status === 'Closed'}
               />
             </div>
             <div>
@@ -357,6 +445,7 @@ export default function GQREditPage() {
                 onChange={(e) => handleWeightChange('sand', 'kgs', e.target.value)} 
                 className="w-full mt-1 p-2 border rounded"
                 placeholder="Enter sand/debris weight"
+                disabled={gqrData.gqr_status === 'Closed'}
               />
             </div>
             <div>
@@ -370,12 +459,13 @@ export default function GQREditPage() {
                 onChange={(e) => handleWeightChange('doubles', 'kgs', e.target.value)} 
                 className="w-full mt-1 p-2 border rounded"
                 placeholder="Enter doubles weight"
+                disabled={gqrData.gqr_status === 'Closed'}
               />
             </div>
           </div>
           
-          {/* Second Row: Gap Items, Podi */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Second Row: Gap Items, Podi, Weight Shortage */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="text-sm font-medium">Gap Items (kg)</label>
               <input 
@@ -387,6 +477,7 @@ export default function GQREditPage() {
                 onChange={(e) => handleWeightChange('gapItems', 'kgs', e.target.value)} 
                 className="w-full mt-1 p-2 border rounded"
                 placeholder="Enter gap items weight"
+                disabled={gqrData.gqr_status === 'Closed'}
               />
             </div>
             <div>
@@ -400,6 +491,21 @@ export default function GQREditPage() {
                 onChange={(e) => handleWeightChange('podi', 'kgs', e.target.value)} 
                 className="w-full mt-1 p-2 border rounded"
                 placeholder="Enter podi weight"
+                disabled={gqrData.gqr_status === 'Closed'}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Weight Shortage (kg)</label>
+              <input 
+                type="text"
+                inputMode="decimal"
+                pattern="[0-9]*\.?[0-9]*"
+                name="weightShortage" 
+                value={weights.weightShortage.kgs} 
+                onChange={(e) => handleWeightChange('weightShortage', 'kgs', e.target.value)} 
+                className="w-full mt-1 p-2 border rounded"
+                placeholder="Enter weight shortage"
+                disabled={gqrData.gqr_status === 'Closed'}
               />
             </div>
           </div>
@@ -461,6 +567,7 @@ export default function GQREditPage() {
              <DeleteButton
                itemId={gqrId}
                itemName={`GQR ${gqrId}`}
+               disabled={gqrData.gqr_status === 'Closed'}
                onDelete={async (gqrId) => {
                  try {
                    // First, get the pre_gr_id from the GQR entry before deleting
@@ -519,13 +626,75 @@ export default function GQREditPage() {
               <Button 
                 type="submit" 
                 variant="primary" 
-                disabled={formSubmitting || gqrData.gqr_status === 'Finalized'}
+                disabled={formSubmitting || gqrData.gqr_status === 'Closed'}
               >
                 {formSubmitting ? 'Saving...' : 'Update GQR'}
               </Button>
            </div>
          </div>
        </form>
+
+       {/* Reverse Status Confirmation Dialog */}
+       {showReverseConfirm && (
+         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
+             <div className="text-center">
+               <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-orange-100 mb-4">
+                 <span className="text-2xl">⚠️</span>
+               </div>
+               
+               {reverseConfirmStep === 1 ? (
+                 <>
+                   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                     Reverse GQR Status?
+                   </h3>
+                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                     This will change the GQR status from <strong>"Closed"</strong> to <strong>"Open"</strong>, 
+                     allowing it to be edited again. This action requires double confirmation.
+                   </p>
+                 </>
+               ) : (
+                 <>
+                   <h3 className="text-lg font-medium text-red-600 dark:text-red-400 mb-2">
+                     Final Confirmation Required!
+                   </h3>
+                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                     <strong>Are you absolutely sure?</strong> This will reverse the finalized GQR status 
+                     and make it editable again. This action cannot be undone easily.
+                   </p>
+                 </>
+               )}
+               
+               <div className="flex gap-3 justify-center">
+                 <button
+                   onClick={cancelReverseConfirm}
+                   className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                   disabled={reverseSubmitting}
+                 >
+                   Cancel
+                 </button>
+                 <button
+                   onClick={handleReverseStatus}
+                   disabled={reverseSubmitting}
+                   className={`px-4 py-2 text-sm font-medium text-white rounded-md transition-colors ${
+                     reverseConfirmStep === 1 
+                       ? 'bg-orange-600 hover:bg-orange-700' 
+                       : 'bg-red-600 hover:bg-red-700'
+                   } ${reverseSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                 >
+                   {reverseSubmitting ? (
+                     'Processing...'
+                   ) : reverseConfirmStep === 1 ? (
+                     'Continue to Final Confirmation'
+                   ) : (
+                     'CONFIRM REVERSE'
+                   )}
+                 </button>
+               </div>
+             </div>
+           </div>
+         </div>
+       )}
     </div>
   );
 }
