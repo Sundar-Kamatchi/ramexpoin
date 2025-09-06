@@ -1,7 +1,7 @@
 import React from 'react';
 import { formatDateDDMMYYYY } from '@/utils/dateUtils';
 
-export const GQRPrint = ({ gqrData, actualCalculations, actualValues, estimatedCalculations, adjustableDamageAllowed }) => {
+export const GQRPrint = ({ gqrData, actualCalculations, estimatedCalculations, adjustableDamageAllowed }) => {
   if (!gqrData) {
     return <div className="p-8 text-center">Loading print data...</div>;
   }
@@ -31,7 +31,7 @@ export const GQRPrint = ({ gqrData, actualCalculations, actualValues, estimatedC
           <div className="grid grid-cols-2 gap-x-4">
             <span><strong>Item:</strong> {gqrData.item_name || 'N/A'}</span>
             <span><strong>Supplier:</strong> {gqrData.supplier_name}</span>
-            <span><strong>GR No:</strong> {gqrData.vouchernumber} / {formatDateDDMMYYYY(gqrData.pre_gr_date || gqrData.created_at)}</span>
+            <span><strong>GR No:</strong> {gqrData.gr_no} / {formatDateDDMMYYYY(gqrData.gr_dt)}</span>
             <span><strong>PO Rate:</strong> ₹{gqrData.rate?.toFixed(2) || '0.00'}</span>
             <span><strong>Podi Rate:</strong> ₹{gqrData.podi_rate?.toFixed(2) || '0.00'}</span>
             <span><strong>Wastage Allowed:</strong> {gqrData.damage_allowed_kgs_ton || 'N/A'} kgs/ton</span>
@@ -45,7 +45,7 @@ export const GQRPrint = ({ gqrData, actualCalculations, actualValues, estimatedC
             <span><strong>Supplier:</strong></span>
             <span>{gqrData.supplier_name || 'N/A'}</span>
             <span><strong>GR No:</strong></span>
-            <span>{gqrData.vouchernumber ?? 'N/A'}</span>
+            <span>{gqrData.gr_no || 'N/A'}</span>
             <span><strong>Final Rate:</strong></span>
             <span>₹{Number(finalRate).toFixed(2)}</span>
             <span><strong>Final Wastage:</strong></span>

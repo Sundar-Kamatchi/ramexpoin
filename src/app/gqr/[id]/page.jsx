@@ -44,8 +44,8 @@ export default function GQREditPage() {
       setError(null);
       try {
 
-        // Try the RPC function first
-        const { data: rpcData, error: rpcError } = await supabase.rpc('get_gqr_details_by_id', { p_gqr_id: gqrId });
+        // Try the RPC function first (convert to integer to avoid overloading)
+        const { data: rpcData, error: rpcError } = await supabase.rpc('get_gqr_details_by_id', { p_gqr_id: parseInt(gqrId) });
         
         if (rpcError) {
           console.warn('GQR Detail: RPC function failed, trying direct query:', rpcError);
@@ -65,17 +65,15 @@ export default function GQREditPage() {
               gap_items_weight,
               weight_shortage_weight,
               gqr_status,
-              pre_gr_entry (
+              pre_gr_entry!gqr_entry_pre_gr_id_fkey (
                 id,
-                vouchernumber,
+                gr_no,
                 net_wt,
                 ladden_wt,
                 empty_wt,
-                gr_no,
                 gr_dt,
                 purchase_orders (
                   id,
-                  vouchernumber,
                   date,
                   rate,
                   podi_rate,
@@ -114,7 +112,7 @@ export default function GQREditPage() {
             pre_gr_id: directData.pre_gr_entry?.id,
             
             // PO Details
-            po_vouchernumber: directData.pre_gr_entry?.purchase_orders?.vouchernumber || '',
+            po_gr_no: directData.pre_gr_entry?.purchase_orders?.vouchernumber || '',
             po_date: directData.pre_gr_entry?.purchase_orders?.date || '',
             supplier_name: directData.pre_gr_entry?.purchase_orders?.suppliers?.name || '',
             item_name: directData.pre_gr_entry?.purchase_orders?.item_master?.item_name || '',
@@ -122,7 +120,7 @@ export default function GQREditPage() {
             damage_allowed_kgs_ton: directData.pre_gr_entry?.purchase_orders?.damage_allowed_kgs_ton || 0,
             
             // Pre-GR Details
-            pre_gr_vouchernumber: directData.pre_gr_entry?.vouchernumber || '',
+            pre_gr_gr_no: directData.pre_gr_entry?.gr_no || '',
             gr_no: directData.pre_gr_entry?.gr_no || '',
             gr_dt: directData.pre_gr_entry?.gr_dt || ''
           };
@@ -153,13 +151,13 @@ export default function GQREditPage() {
             // Ensure all PO fields are available even if RPC doesn't return them
             const completeData = {
               ...fetchedData,
-              po_vouchernumber: fetchedData.po_vouchernumber || fetchedData.pre_gr_entry?.purchase_orders?.vouchernumber || '',
+              po_gr_no: fetchedData.vouchernumber || fetchedData.pre_gr_entry?.purchase_orders?.vouchernumber || '', // FIXED: Use vouchernumber from RPC result
               po_date: fetchedData.po_date || fetchedData.pre_gr_entry?.purchase_orders?.date || '',
               supplier_name: fetchedData.supplier_name || fetchedData.pre_gr_entry?.purchase_orders?.suppliers?.name || '',
               item_name: fetchedData.item_name || fetchedData.pre_gr_entry?.purchase_orders?.item_master?.item_name || '',
               cargo: fetchedData.cargo || fetchedData.pre_gr_entry?.purchase_orders?.cargo || 0,
               damage_allowed_kgs_ton: fetchedData.damage_allowed_kgs_ton || fetchedData.pre_gr_entry?.purchase_orders?.damage_allowed_kgs_ton || 0,
-              pre_gr_vouchernumber: fetchedData.pre_gr_vouchernumber || fetchedData.pre_gr_entry?.vouchernumber || '',
+              pre_gr_gr_no: fetchedData.pre_gr_gr_no || fetchedData.pre_gr_entry?.gr_no || '',
               gr_no: fetchedData.gr_no || fetchedData.pre_gr_entry?.gr_no || '',
               gr_dt: fetchedData.gr_dt || fetchedData.pre_gr_entry?.gr_dt || '',
               // Calculate net weight if not provided by RPC
@@ -370,7 +368,7 @@ export default function GQREditPage() {
     <div className="container mx-auto p-4 md:p-6 space-y-6 mt-20">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold">Edit GQR (GR NO: {gqrData?.gr_no || 'N/A'})</h1>
+          <h1 className="text-2xl font-bold">Edit GQR (GR NO: {gqrData?.gqr_no || gqrData?.gr_no || 'N/A'})</h1>
           {gqrData.gqr_status === 'Closed' && (
             <div className="mt-2 flex items-center gap-3">
               <div className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium inline-block">
@@ -393,7 +391,7 @@ export default function GQREditPage() {
       {successMessage && <div className="bg-green-100 text-green-700 p-4 rounded-md">{successMessage}</div>}
       
       <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-2 border-b pb-2">Purchase Order Details (Ref: {gqrData.po_vouchernumber})</h2>
+          <h2 className="text-xl font-semibold mb-2 border-b pb-2">Purchase Order Details (PO No: {gqrData.po_gr_no})</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div><strong>Supplier:</strong> {gqrData.supplier_name}</div>
             <div><strong>Item:</strong> {gqrData.item_name}</div>
@@ -402,7 +400,7 @@ export default function GQREditPage() {
           </div>
       </div>
       <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow">
-        <h2 className="text-xl font-semibold mb-2 border-b pb-2">Pre-GR Details (Ref: {gqrData.pre_gr_vouchernumber})</h2>
+        <h2 className="text-xl font-semibold mb-2 border-b pb-2">Pre-GR Details (Ref: {gqrData.pre_gr_gr_no})</h2>
         <div className="grid grid-cols-1 gap-4 items-center text-sm text-center">
             <div><p className="font-medium text-gray-500">Net Weight</p><p className="font-bold text-lg text-blue-600 dark:text-blue-400">{gqrData.net_wt} kg</p></div>
         </div>

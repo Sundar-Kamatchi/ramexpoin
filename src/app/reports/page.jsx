@@ -264,7 +264,7 @@ export default function ReportsPage() {
              total_wastage_weight,
              pre_gr_entry (
                id,
-               vouchernumber,
+                                 gr_no,
                purchase_orders (
                  id,
                  cargo,
@@ -319,7 +319,7 @@ export default function ReportsPage() {
                  total_wastage_weight,
                  pre_gr_entry (
                    id,
-                   vouchernumber,
+                   gr_no,
                    purchase_orders (
                      id,
                      cargo,
@@ -636,7 +636,7 @@ export default function ReportsPage() {
         <ResponsiveContainer width="100%" height={400}>
           <BarChart data={reportData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="pre_gr_vouchernumber" />
+                            <XAxis dataKey="pre_gr_gr_no" />
             <YAxis label={{ value: 'Percentage (%)', angle: -90, position: 'insideLeft' }} />
             <Tooltip />
             <Legend />
@@ -664,7 +664,7 @@ export default function ReportsPage() {
             {reportData.map((row) => (
               <tr key={row.gqr_id}>
                 <td className="px-6 py-4">{row.supplier_name}</td>
-                <td className="px-6 py-4">{row.pre_gr_vouchernumber}</td>
+                                 <td className="px-6 py-4">{row.pre_gr_gr_no}</td>
                 <td className="px-6 py-4 text-right">{row.assured_cargo_percentage?.toFixed(2)}%</td>
                 <td className="px-6 py-4 text-right font-bold">{row.actual_yield_percentage?.toFixed(2)}%</td>
                 <VarianceCell value={row.yield_variance} />

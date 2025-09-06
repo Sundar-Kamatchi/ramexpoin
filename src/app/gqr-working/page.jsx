@@ -61,8 +61,8 @@ export default function GQRWorkingPage() {
           created_at,
           total_value_received,
           gqr_status,
-          pre_gr_entry (
-            vouchernumber,
+          pre_gr_entry!gqr_entry_pre_gr_id_fkey (
+            gr_no,
             net_wt,
             gr_dt,
             suppliers ( name )
@@ -124,14 +124,17 @@ export default function GQRWorkingPage() {
             volatile_podi_rate,
             volatile_wastage_kgs_per_ton,
             gqr_status,
-            pre_gr_entry (
+            pre_gr_entry!gqr_entry_pre_gr_id_fkey (
               id,
-              vouchernumber,
+              gr_no,
+              gr_dt,
               date,
               net_wt,
               ladden_wt,
               empty_wt,
               purchase_orders (
+                vouchernumber,
+                date,
                 rate,
                 podi_rate,
                 quantity,
@@ -174,9 +177,11 @@ export default function GQRWorkingPage() {
           rate: directData.pre_gr_entry?.purchase_orders?.rate || 0,
           podi_rate: directData.pre_gr_entry?.purchase_orders?.podi_rate || 0,
           po_quantity: directData.pre_gr_entry?.purchase_orders?.quantity || 0,
-          po_date: directData.pre_gr_entry?.purchase_orders?.created_at,
+          po_date: directData.pre_gr_entry?.purchase_orders?.date || directData.pre_gr_entry?.purchase_orders?.created_at,
+          vouchernumber: directData.pre_gr_entry?.purchase_orders?.vouchernumber,
           pre_gr_entry_id: directData.pre_gr_entry?.id,
-          vouchernumber: directData.pre_gr_entry?.vouchernumber,
+          gr_no: directData.pre_gr_entry?.gr_no,
+          gr_dt: directData.pre_gr_entry?.gr_dt,
           pre_gr_date: directData.pre_gr_entry?.date,
           net_wt: directData.pre_gr_entry?.net_wt || ((directData.pre_gr_entry?.ladden_wt || 0) - (directData.pre_gr_entry?.empty_wt || 0)),
           supplier_name: directData.pre_gr_entry?.purchase_orders?.suppliers?.name,
@@ -225,11 +230,14 @@ export default function GQRWorkingPage() {
         // RPC function worked
         console.log('GQR Working: RPC result:', rpcData);
         console.log('GQR Working: Weight shortage from RPC:', rpcData[0]?.weight_shortage_weight);
+        console.log('GQR Working: GR DT from RPC:', rpcData[0]?.gr_dt);
         if (rpcData && rpcData.length > 0) {
           const gqr = {
             ...rpcData[0],
             gqr_status: rpcData[0].gqr_status || 'Open',
-            pre_gr_date: rpcData[0].pre_gr_date || rpcData[0].date
+            gr_dt: rpcData[0].gr_dt,
+            pre_gr_date: rpcData[0].pre_gr_date || rpcData[0].date,
+            vouchernumber: rpcData[0].vouchernumber // FIXED: Ensure vouchernumber is properly set from RPC result
           };
           console.log('GQR Working: Setting GQR data from RPC:', gqr);
           console.log('GQR Working: Weight shortage in final GQR data from RPC:', gqr.weight_shortage_weight);
@@ -505,7 +513,7 @@ export default function GQRWorkingPage() {
             <option value="">Select a GQR...</option>
             {gqrList.map((gqr) => (
               <option key={gqr.id} value={gqr.id}>
-                GQR #{gqr.id} - {gqr.pre_gr_entry?.vouchernumber} - {gqr.pre_gr_entry?.suppliers?.name}
+                GQR #{gqr.id} - {gqr.pre_gr_entry?.gr_no || gqr.pre_gr_entry?.vouchernumber} - {gqr.pre_gr_entry?.suppliers?.name}
               </option>
             ))}
           </select>
@@ -517,7 +525,7 @@ export default function GQRWorkingPage() {
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-6">
               <h2 className="text-xl font-semibold mb-4 border-b pb-2">Purchase Order Details</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div><strong>PO Number:</strong> {gqrData.vouchernumber}</div>
+                <div><strong>PO Number:</strong> {gqrData.vouchernumber || 'N/A'}</div>
                 <div><strong>Supplier:</strong> {gqrData.supplier_name}</div>
                 <div><strong>PO Quantity:</strong> {gqrData.po_quantity || 0} MT</div>
                 <div><strong>PO Date:</strong> {gqrData.po_date ? formatDateDDMMYYYY(gqrData.po_date) : 'N/A'}</div>
@@ -532,15 +540,14 @@ export default function GQRWorkingPage() {
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-6">
               <h2 className="text-xl font-semibold mb-4 border-b pb-2">GQR Details</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div><strong>GR No:</strong> {gqrData.vouchernumber}</div>
-                <div><strong>Pre-GR Number:</strong> {gqrData.vouchernumber}</div>
+                <div><strong>GR No:</strong> {gqrData.gr_no || 'N/A'}</div>
                 <div><strong>Export Quality:</strong> {gqrData.export_quality_weight || 0} kg</div>
                 <div><strong>Podi Weight:</strong> {gqrData.podi_weight || 0} kg</div>
                 <div><strong>Gap Items Weight:</strong> {gqrData.gap_items_weight || 0} kg</div>
                 <div><strong>Rot Weight:</strong> {gqrData.rot_weight || 0} kg</div>
                 <div><strong>Doubles Weight:</strong> {gqrData.doubles_weight || 0} kg</div>
-                                 <div><strong>Sand Weight:</strong> {gqrData.sand_weight || 0} kg</div>
-                 <div><strong>Weight Shortage:</strong> {gqrData.weight_shortage_weight || 0} kg</div>
+                <div><strong>Sand Weight:</strong> {gqrData.sand_weight || 0} kg</div>
+                <div><strong>Weight Shortage:</strong> {gqrData.weight_shortage_weight || 0} kg</div>
                  <div><strong>Total Wastage:</strong> {(gqrData.rot_weight || 0) + (gqrData.doubles_weight || 0) + (gqrData.sand_weight || 0) + (gqrData.weight_shortage_weight || 0)} kg</div>
                  <div><strong>Cargo Received Date:</strong> {gqrData.pre_gr_date ? formatDateDDMMYYYY(gqrData.pre_gr_date) : 'N/A'}</div>
               </div>
