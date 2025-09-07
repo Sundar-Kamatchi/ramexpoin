@@ -1,10 +1,10 @@
--- Fix the get_gqr_details_by_id function to return the correct PO number
--- The issue is that it's returning pre.vouchernumber instead of po.vouchernumber
+-- Update the RPC function to use the correct column name
+-- This fixes the relationship ambiguity issue
 
 -- First, drop the existing function to avoid return type conflicts
 DROP FUNCTION IF EXISTS get_gqr_details_by_id(INTEGER);
 
--- Now create the new function with the correct return type
+-- Now create the new function with the correct column reference
 CREATE OR REPLACE FUNCTION get_gqr_details_by_id(p_gqr_id INTEGER)
 RETURNS TABLE (
   id INTEGER,
@@ -24,7 +24,7 @@ RETURNS TABLE (
   volatile_wastage_kgs_per_ton NUMERIC,
   gqr_status TEXT,
   pre_gr_entry_id INTEGER,
-  vouchernumber TEXT,  -- This should be the PO number (po.vouchernumber)
+  vouchernumber TEXT,
   net_wt NUMERIC,
   supplier_name TEXT,
   po_date DATE,
@@ -53,13 +53,13 @@ BEGIN
     gqr.volatile_wastage_kgs_per_ton,
     gqr.gqr_status,
     pre.id as pre_gr_entry_id,
-    po.vouchernumber,  -- FIXED: Use PO vouchernumber instead of pre_gr_entry vouchernumber
+    po.vouchernumber,
     pre.net_wt,
     s.name as supplier_name,
     po.date as po_date,
     im.item_name
   FROM gqr_entry gqr
-  LEFT JOIN pre_gr_entry pre ON gqr.pre_gr_id = pre.id
+  LEFT JOIN pre_gr_entry pre ON gqr.pre_gr_id = pre.id  -- FIXED: Use pre_gr_id instead of pre_gr_entry_id
   LEFT JOIN purchase_orders po ON pre.po_id = po.id
   LEFT JOIN suppliers s ON po.supplier_id = s.id
   LEFT JOIN item_master im ON po.item_id = im.id
@@ -69,3 +69,4 @@ $$;
 
 -- Grant execute permission to authenticated users
 GRANT EXECUTE ON FUNCTION get_gqr_details_by_id(INTEGER) TO authenticated;
+GRANT EXECUTE ON FUNCTION get_gqr_details_by_id(INTEGER) TO service_role;

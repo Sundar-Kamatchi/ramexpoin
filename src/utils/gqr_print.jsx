@@ -12,23 +12,52 @@ export const GQRPrint = ({ gqrData, actualCalculations, estimatedCalculations, a
   const netWt = Number(actualCalculations?.totalCargo || 0);
 
   return (
-    <div className="print-container bg-white text-black p-2 font-sans" style={{ fontSize: '10px', lineHeight: '1.2' }}>
-      {/* Header */}
-      <div className="text-center mb-3">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '2px' }}>
+    <>
+      <style jsx>{`
+        @media print {
+          @page {
+            size: A4;
+            margin: 1cm;
+          }
+          .print-container {
+            height: 100vh !important;
+            overflow: hidden !important;
+            page-break-inside: avoid !important;
+            font-size: 10px !important;
+            line-height: 1.2 !important;
+            padding: 8px !important;
+            margin: 0 !important;
+          }
+          .print-container * {
+            page-break-inside: avoid !important;
+          }
+        }
+      `}</style>
+      <div className="print-container bg-white text-black font-sans" style={{ 
+        fontSize: '10px', 
+        lineHeight: '1.2',
+        padding: '8px',
+        margin: '0',
+        height: '100vh',
+        overflow: 'hidden',
+        pageBreakInside: 'avoid'
+      }}>
+      {/* Header - Better spacing */}
+      <div className="text-center" style={{ marginBottom: '12px', marginTop: '0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '4px' }}>
           <img src="/ramlogo.png" alt="Company Logo" style={{ width: '30px', height: '30px', marginRight: '8px' }} />
           <h1 style={{ fontSize: '18px', fontWeight: 'bold', color: 'black', margin: '0' }}>
             Ramsamy Exports & Import Pvt Ltd
           </h1>
         </div>
-        <h2 className="text-md font-semibold" style={{ margin: '0' }}>Goods Quality Report (GQR)</h2>
+        <h2 style={{ fontSize: '14px', fontWeight: 'semibold', margin: '0' }}>Goods Quality Report (GQR)</h2>
       </div>
 
       {/* PO Details + Office Info side-by-side (each 50%) */}
-      <div className="mb-2 flex gap-2">
+      <div style={{ marginBottom: '8px', display: 'flex', gap: '6px' }}>
         {/* PO Details */}
-        <div className="p-1 border border-black rounded w-1/2" style={{ fontSize: '10px', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-          <div className="grid grid-cols-2 gap-x-4">
+        <div style={{ padding: '4px', border: '1px solid black', borderRadius: '2px', width: '50%', fontSize: '9px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px' }}>
             <span><strong>Item:</strong> {gqrData.item_name || 'N/A'}</span>
             <span><strong>Supplier:</strong> {gqrData.supplier_name}</span>
             <span><strong>GR No:</strong> {gqrData.gr_no} / {formatDateDDMMYYYY(gqrData.gr_dt)}</span>
@@ -39,9 +68,9 @@ export const GQRPrint = ({ gqrData, actualCalculations, estimatedCalculations, a
           </div>
         </div>
         {/* Office Info */}
-        <div className="p-1 border border-black rounded w-1/2" style={{ fontSize: '10px', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-          <div className="text-center font-bold mb-1">Final Settlement</div>
-          <div className="grid grid-cols-2 gap-x-2">
+        <div style={{ padding: '4px', border: '1px solid black', borderRadius: '2px', width: '50%', fontSize: '9px' }}>
+          <div style={{ textAlign: 'center', fontWeight: 'bold', marginBottom: '3px' }}>Final Settlement</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px' }}>
             <span><strong>Supplier:</strong></span>
             <span>{gqrData.supplier_name || 'N/A'}</span>
             <span><strong>GR No:</strong></span>
@@ -57,8 +86,8 @@ export const GQRPrint = ({ gqrData, actualCalculations, estimatedCalculations, a
       </div>
       
       {/* Final Parameters */}
-      <div className="mb-2 p-1 border border-black rounded">
-        <div className="grid grid-cols-3 gap-x-4" style={{ fontSize: '10px' }}>
+      <div style={{ marginBottom: '6px', padding: '4px', border: '1px solid black', borderRadius: '2px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', fontSize: '9px' }}>
             <span><strong>Final Rate:</strong> ₹{gqrData.volatile_po_rate || gqrData.rate}</span>
             <span><strong>Final Podi Rate:</strong> ₹{gqrData.volatile_podi_rate || gqrData.podi_rate}</span>
             <span><strong>Final Wastage:</strong> {gqrData.volatile_wastage_kgs_per_ton || adjustableDamageAllowed} kgs/ton</span>
@@ -66,96 +95,97 @@ export const GQRPrint = ({ gqrData, actualCalculations, estimatedCalculations, a
       </div>
       
       {/* Weight Details */}
-      <div className="mb-2 p-1 border border-black rounded">
-        <div className="grid grid-cols-5 gap-x-4" style={{ fontSize: '10px' }}>
+      <div style={{ marginBottom: '6px', padding: '4px', border: '1px solid black', borderRadius: '2px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px', fontSize: '9px' }}>
           <div><strong>Net Wt:</strong> {actualCalculations.totalCargo.toFixed(2)}</div>
           <div><strong>Export:</strong> {actualCalculations.exportQuality.toFixed(2)}</div>
           <div><strong>Podi:</strong> {actualCalculations.podiKgs.toFixed(2)}</div>
           <div><strong>Gap Items:</strong> {actualCalculations.gapKgs.toFixed(2)}</div>
-          <div><strong>Total Wastage:</strong> {totalWastage.toFixed(2)}</div>
-          <div></div> {/* Spacer */}
+          <div></div> {/* Empty cell */}
           <div><strong>ROT:</strong> {gqrData.rot_weight || 0}</div>
           <div><strong>Doubles:</strong> {gqrData.doubles_weight || 0}</div>
           <div><strong>Sand:</strong> {gqrData.sand_weight || 0}</div>
           <div><strong>Weight Shortage:</strong> {gqrData.weight_shortage_weight || 0}</div>
+          <div><strong>Total Wastage:</strong> {totalWastage.toFixed(2)}</div>
         </div>
       </div>
 
       {/* Final Report Table */}
-      <div className="flex-grow mb-2">
-        <h3 className="text-md font-bold mb-2 text-center">Final Report</h3>
-        <table className="w-full border-collapse border border-black" style={{ fontSize: '9px' }}>
+      <div style={{ flexGrow: 1, marginBottom: '6px' }}>
+        <h3 style={{ fontSize: '11px', fontWeight: 'bold', marginBottom: '6px', textAlign: 'center' }}>Final Report</h3>
+        <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid black', fontSize: '8px' }}>
           <thead>
-            <tr className="bg-gray-200 ">
-              <th className="border border-black p-0 px-1 py-1 text-left">DESCRIPTION</th>
-              <th className="border border-black p-0 px-1 py-1 text-center">CALCULATED (20MT)</th>
-              <th className="border border-black p-0 px-1 py-1 text-center">ACTUAL</th>
-              <th className="border border-black p-0 px-1 py-1 text-center">DIFFERENCE</th>
-              <th className="border border-black p-0 px-1 py-1 text-center">TOTAL DIFFERENCE</th>
+            <tr style={{ backgroundColor: '#f0f0f0' }}>
+              <th style={{ border: '1px solid black', padding: '2px', textAlign: 'left' }}>DESCRIPTION</th>
+              <th style={{ border: '1px solid black', padding: '2px', textAlign: 'center' }}>CALCULATED (20MT)</th>
+              <th style={{ border: '1px solid black', padding: '2px', textAlign: 'center' }}>ACTUAL</th>
+              <th style={{ border: '1px solid black', padding: '2px', textAlign: 'center' }}>DIFFERENCE</th>
+              <th style={{ border: '1px solid black', padding: '2px', textAlign: 'center' }}>TOTAL DIFFERENCE</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td className="border border-black p-0 px-1 py-1 font-semibold">TOTAL RATE AFTER PODI & GAP ITEMS PKG</td>
-              <td className="border border-black p-0 px-1 py-1 text-center">₹{estimatedCalculations.totalCargoAfterPodiRate.toFixed(2)}</td>
-              <td className="border border-black p-0 px-1 py-1 text-center">₹{actualCalculations.totalCargoAfterPodiAndGapRate.toFixed(2)}</td>
-              <td className="border border-black p-0 px-1 py-1 text-center">₹{(estimatedCalculations.totalCargoAfterPodiRate - actualCalculations.totalCargoAfterPodiAndGapRate).toFixed(2)}</td>
-              <td className="border border-black p-0 px-1 py-1 text-center">-</td>
+              <td style={{ border: '1px solid black', padding: '2px', fontWeight: '600' }}>TOTAL RATE AFTER PODI & GAP ITEMS PKG</td>
+              <td style={{ border: '1px solid black', padding: '2px', textAlign: 'center' }}>₹{estimatedCalculations.totalCargoAfterPodiRate.toFixed(2)}</td>
+              <td style={{ border: '1px solid black', padding: '2px', textAlign: 'center' }}>₹{actualCalculations.totalCargoAfterPodiAndGapRate.toFixed(2)}</td>
+              <td style={{ border: '1px solid black', padding: '2px', textAlign: 'center' }}>₹{(estimatedCalculations.totalCargoAfterPodiRate - actualCalculations.totalCargoAfterPodiAndGapRate).toFixed(2)}</td>
+              <td style={{ border: '1px solid black', padding: '2px', textAlign: 'center' }}>-</td>
             </tr>
             <tr>
-              <td className="border border-black p-0 px-1 py-1 font-semibold">TOTAL RATE AFTER PODI & GAP ITEMS PMT</td>
-              <td className="border border-black p-0 px-1 py-1 text-center">₹{(estimatedCalculations.totalCargoAfterPodiRate * 1000).toFixed(2)}</td>
-              <td className="border border-black p-0 px-1 py-1 text-center">₹{(actualCalculations.totalCargoAfterPodiAndGapRate * 1000).toFixed(2)}</td>
-              <td className="border border-black p-0 px-1 py-1 text-center">₹{Math.round((estimatedCalculations.totalCargoAfterPodiRate * 1000) - (actualCalculations.totalCargoAfterPodiAndGapRate * 1000))}</td>
-              <td className="border border-black p-0 px-1 py-1 text-center">₹{Math.round((actualCalculations.totalCargoAfterPodiAndGapKgs * ((estimatedCalculations.totalCargoAfterPodiRate * 1000) - (actualCalculations.totalCargoAfterPodiAndGapRate * 1000))) / 1000).toFixed(2)}</td>
+              <td style={{ border: '1px solid black', padding: '2px', fontWeight: '600' }}>TOTAL RATE AFTER PODI & GAP ITEMS PMT</td>
+              <td style={{ border: '1px solid black', padding: '2px', textAlign: 'center' }}>₹{(estimatedCalculations.totalCargoAfterPodiRate * 1000).toFixed(2)}</td>
+              <td style={{ border: '1px solid black', padding: '2px', textAlign: 'center' }}>₹{(actualCalculations.totalCargoAfterPodiAndGapRate * 1000).toFixed(2)}</td>
+              <td style={{ border: '1px solid black', padding: '2px', textAlign: 'center' }}>₹{Math.round((estimatedCalculations.totalCargoAfterPodiRate * 1000) - (actualCalculations.totalCargoAfterPodiAndGapRate * 1000))}</td>
+              <td style={{ border: '1px solid black', padding: '2px', textAlign: 'center' }}>₹{Math.round((actualCalculations.totalCargoAfterPodiAndGapKgs * ((estimatedCalculations.totalCargoAfterPodiRate * 1000) - (actualCalculations.totalCargoAfterPodiAndGapRate * 1000))) / 1000).toFixed(2)}</td>
             </tr>
             <tr>
-              <td className="border border-black p-0 px-1 py-1 font-semibold">PODI & CARGO ITEMS %</td>
-              <td className="border border-black p-0 px-1 py-1 text-center">{((estimatedCalculations.podiKgs / estimatedCalculations.totalCargo) * 100).toFixed(2)}%</td>
-              <td className="border border-black p-0 px-1 py-1 text-center">{(((actualCalculations.podiKgs + actualCalculations.gapKgs) / actualCalculations.totalCargo) * 100).toFixed(2)}%</td>
-              <td className="border border-black p-0 px-1 py-1 text-center">{(((estimatedCalculations.podiKgs / estimatedCalculations.totalCargo) * 100) - (((actualCalculations.podiKgs + actualCalculations.gapKgs) / actualCalculations.totalCargo) * 100)).toFixed(2)}%</td>
-              <td className="border border-black p-0 px-1 py-1 text-center">-</td>
+              <td style={{ border: '1px solid black', padding: '2px', fontWeight: '600' }}>PODI & CARGO ITEMS %</td>
+              <td style={{ border: '1px solid black', padding: '2px', textAlign: 'center' }}>{((estimatedCalculations.podiKgs / estimatedCalculations.totalCargo) * 100).toFixed(2)}%</td>
+              <td style={{ border: '1px solid black', padding: '2px', textAlign: 'center' }}>{(((actualCalculations.podiKgs + actualCalculations.gapKgs) / actualCalculations.totalCargo) * 100).toFixed(2)}%</td>
+              <td style={{ border: '1px solid black', padding: '2px', textAlign: 'center' }}>{(((estimatedCalculations.podiKgs / estimatedCalculations.totalCargo) * 100) - (((actualCalculations.podiKgs + actualCalculations.gapKgs) / actualCalculations.totalCargo) * 100)).toFixed(2)}%</td>
+              <td style={{ border: '1px solid black', padding: '2px', textAlign: 'center' }}>-</td>
             </tr>
-            <tr className="border-t-2 border-black">
-              <td className="border border-black p-0 px-1 py-1 font-semibold">WASTAGE KGS PMT</td>
-              <td className="border border-black p-0 px-1 text-center">{gqrData.volatile_wastage_kgs_per_ton || adjustableDamageAllowed}</td>
-              <td className="border border-black p-0 px-1 text-center">{Math.round(actualCalculations.totalCargo > 0 ? ((actualCalculations.wastageKgs / actualCalculations.totalCargo) * 1000) : 0)}</td>
-              <td className="border border-black p-0 px-1 text-center">-{Math.abs(Math.round((gqrData.volatile_wastage_kgs_per_ton || adjustableDamageAllowed) - (actualCalculations.totalCargo > 0 ? ((actualCalculations.wastageKgs / actualCalculations.totalCargo) * 1000) : 0)))}</td>
-              <td className="border border-black p-0 px-1 text-center">₹{(Math.round((gqrData.volatile_wastage_kgs_per_ton || adjustableDamageAllowed) - (actualCalculations.totalCargo > 0 ? ((actualCalculations.wastageKgs / actualCalculations.totalCargo) * 1000) : 0)) * (actualCalculations.totalCargo / 1000) * actualCalculations.totalCargoAfterPodiAndGapRate).toFixed(2)}</td>
+            <tr style={{ borderTop: '2px solid black' }}>
+              <td style={{ border: '1px solid black', padding: '2px', fontWeight: '600' }}>WASTAGE KGS PMT</td>
+              <td style={{ border: '1px solid black', padding: '2px', textAlign: 'center' }}>{gqrData.volatile_wastage_kgs_per_ton || adjustableDamageAllowed}</td>
+              <td style={{ border: '1px solid black', padding: '2px', textAlign: 'center' }}>{Math.round(actualCalculations.totalCargo > 0 ? ((actualCalculations.wastageKgs / actualCalculations.totalCargo) * 1000) : 0)}</td>
+              <td style={{ border: '1px solid black', padding: '2px', textAlign: 'center' }}>-{Math.abs(Math.round((gqrData.volatile_wastage_kgs_per_ton || adjustableDamageAllowed) - (actualCalculations.totalCargo > 0 ? ((actualCalculations.wastageKgs / actualCalculations.totalCargo) * 1000) : 0)))}</td>
+              <td style={{ border: '1px solid black', padding: '2px', textAlign: 'center' }}>₹{(Math.round((gqrData.volatile_wastage_kgs_per_ton || adjustableDamageAllowed) - (actualCalculations.totalCargo > 0 ? ((actualCalculations.wastageKgs / actualCalculations.totalCargo) * 1000) : 0)) * (actualCalculations.totalCargo / 1000) * actualCalculations.totalCargoAfterPodiAndGapRate).toFixed(2)}</td>
             </tr>
             <tr>
-              <td className="border border-black p-0 px-1 py-1 font-semibold">WASTAGE %</td>
-              <td className="border border-black p-0 px-1 py-1 text-center">{((estimatedCalculations.wastageKgs / estimatedCalculations.totalCargo) * 100).toFixed(2)}%</td>
-              <td className="border border-black p-0 px-1 py-1 text-center">{((actualCalculations.wastageKgs / actualCalculations.totalCargo) * 100).toFixed(2)}%</td>
-              <td className="border border-black p-0 px-1 py-1 text-center">{(((estimatedCalculations.wastageKgs / estimatedCalculations.totalCargo) * 100) - ((actualCalculations.wastageKgs / actualCalculations.totalCargo) * 100)).toFixed(2)}%</td>
-              <td className="border border-black p-0 px-1 py-1 text-center">-</td>
+              <td style={{ border: '1px solid black', padding: '2px', fontWeight: '600' }}>WASTAGE %</td>
+              <td style={{ border: '1px solid black', padding: '2px', textAlign: 'center' }}>{((estimatedCalculations.wastageKgs / estimatedCalculations.totalCargo) * 100).toFixed(2)}%</td>
+              <td style={{ border: '1px solid black', padding: '2px', textAlign: 'center' }}>{((actualCalculations.wastageKgs / actualCalculations.totalCargo) * 100).toFixed(2)}%</td>
+              <td style={{ border: '1px solid black', padding: '2px', textAlign: 'center' }}>{(((estimatedCalculations.wastageKgs / estimatedCalculations.totalCargo) * 100) - ((actualCalculations.wastageKgs / actualCalculations.totalCargo) * 100)).toFixed(2)}%</td>
+              <td style={{ border: '1px solid black', padding: '2px', textAlign: 'center' }}>-</td>
             </tr>
-            <tr className="border-t-2 border-black bg-gray-100">
-              <td className="border border-black p-1 py-1 font-bold text-center">TOTAL</td>
-              <td className="border border-black p-1 py-1 text-center font-bold">-</td>
-              <td className="border border-black p-1 py-1 text-center font-bold">-</td>
-              <td className="border border-black p-1 py-1 text-center font-bold">-</td>
-              <td className="border border-black p-1 py-1 text-center font-bold">₹{(Math.round((actualCalculations.totalCargoAfterPodiAndGapKgs * ((estimatedCalculations.totalCargoAfterPodiRate * 1000) - (actualCalculations.totalCargoAfterPodiAndGapRate * 1000))) / 1000) + (Math.round((gqrData.volatile_wastage_kgs_per_ton || adjustableDamageAllowed) - (actualCalculations.totalCargo > 0 ? ((actualCalculations.wastageKgs / actualCalculations.totalCargo) * 1000) : 0)) * (actualCalculations.totalCargo / 1000) * actualCalculations.totalCargoAfterPodiAndGapRate)).toFixed(2)}</td>
+            <tr style={{ borderTop: '2px solid black', backgroundColor: '#f0f0f0' }}>
+              <td style={{ border: '1px solid black', padding: '2px', fontWeight: 'bold', textAlign: 'center' }}>TOTAL</td>
+              <td style={{ border: '1px solid black', padding: '2px', textAlign: 'center', fontWeight: 'bold' }}>-</td>
+              <td style={{ border: '1px solid black', padding: '2px', textAlign: 'center', fontWeight: 'bold' }}>-</td>
+              <td style={{ border: '1px solid black', padding: '2px', textAlign: 'center', fontWeight: 'bold' }}>-</td>
+              <td style={{ border: '1px solid black', padding: '2px', textAlign: 'center', fontWeight: 'bold' }}>₹{(Math.round((actualCalculations.totalCargoAfterPodiAndGapKgs * ((estimatedCalculations.totalCargoAfterPodiRate * 1000) - (actualCalculations.totalCargoAfterPodiAndGapRate * 1000))) / 1000) + (Math.round((gqrData.volatile_wastage_kgs_per_ton || adjustableDamageAllowed) - (actualCalculations.totalCargo > 0 ? ((actualCalculations.wastageKgs / actualCalculations.totalCargo) * 1000) : 0)) * (actualCalculations.totalCargo / 1000) * actualCalculations.totalCargoAfterPodiAndGapRate)).toFixed(2)}</td>
             </tr>
           </tbody>
         </table>
       </div>
 
       {/* Signature Section */}
-      <div className="mt-auto pt-6 border-t border-gray-300">
-        <div className="flex justify-between items-center text-xs text-center mt-15">
+      <div style={{ marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid #ccc' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '9px', textAlign: 'center' }}>
           <div>
-            <p className="font-semibold">Prepared by</p>
+            <p style={{ fontWeight: '600', margin: '0' }}>Prepared by</p>
           </div>
           <div>
-            <p className="font-semibold">Checked by</p>
+            <p style={{ fontWeight: '600', margin: '0' }}>Checked by</p>
           </div>
           <div>
-            <p className="font-semibold">Authorised Signatory</p>
+            <p style={{ fontWeight: '600', margin: '0' }}>Authorised Signatory</p>
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

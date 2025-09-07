@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import { fetchGQRWithRelationships } from '@/lib/gqrDataFetcher';
 import { Button } from '@/components/ui/button';
 import { formatDateDDMMYYYY } from '@/utils/dateUtils';
 import DeleteButton from '@/components/DeleteButton';
@@ -44,52 +45,9 @@ export default function GQREditPage() {
       setError(null);
       try {
 
-        // Try the RPC function first (convert to integer to avoid overloading)
-        const { data: rpcData, error: rpcError } = await supabase.rpc('get_gqr_details_by_id', { p_gqr_id: parseInt(gqrId) });
-        
-        if (rpcError) {
-          console.warn('GQR Detail: RPC function failed, trying direct query:', rpcError);
-          
-          // Fallback: Direct query approach
-          const { data: directData, error: directError } = await supabase
-            .from('gqr_entry')
-            .select(`
-              id,
-              created_at,
-              total_value_received,
-              export_quality_weight,
-              podi_weight,
-              rot_weight,
-              doubles_weight,
-              sand_weight,
-              gap_items_weight,
-              weight_shortage_weight,
-              gqr_status,
-              pre_gr_entry!gqr_entry_pre_gr_id_fkey (
-                id,
-                gr_no,
-                net_wt,
-                ladden_wt,
-                empty_wt,
-                gr_dt,
-                purchase_orders (
-                  id,
-                  date,
-                  rate,
-                  podi_rate,
-                  damage_allowed_kgs_ton,
-                  cargo,
-                  suppliers ( name ),
-                  item_master ( item_name )
-                )
-              )
-            `)
-            .eq('id', gqrId)
-            .single();
-          
-          if (directError) {
-            throw new Error(`Direct query failed: ${directError.message}`);
-          }
+        // Always use the production-safe utility function to avoid relationship issues
+        console.log('GQR Detail: Using production-safe utility function...');
+        const directData = await fetchGQRWithRelationships(gqrId);
           
           // Transform the direct query result to match expected structure
           const fetchedData = {
@@ -142,49 +100,6 @@ export default function GQREditPage() {
             gap_item2_bags: '',
           });
           
-          
-        } else {
-          // RPC function worked
-          if (rpcData && rpcData.length > 0) {
-            const fetchedData = rpcData[0];
-            
-            // Ensure all PO fields are available even if RPC doesn't return them
-            const completeData = {
-              ...fetchedData,
-              po_gr_no: fetchedData.vouchernumber || fetchedData.pre_gr_entry?.purchase_orders?.vouchernumber || '', // FIXED: Use vouchernumber from RPC result
-              po_date: fetchedData.po_date || fetchedData.pre_gr_entry?.purchase_orders?.date || '',
-              supplier_name: fetchedData.supplier_name || fetchedData.pre_gr_entry?.purchase_orders?.suppliers?.name || '',
-              item_name: fetchedData.item_name || fetchedData.pre_gr_entry?.purchase_orders?.item_master?.item_name || '',
-              cargo: fetchedData.cargo || fetchedData.pre_gr_entry?.purchase_orders?.cargo || 0,
-              damage_allowed_kgs_ton: fetchedData.damage_allowed_kgs_ton || fetchedData.pre_gr_entry?.purchase_orders?.damage_allowed_kgs_ton || 0,
-              pre_gr_gr_no: fetchedData.pre_gr_gr_no || fetchedData.pre_gr_entry?.gr_no || '',
-              gr_no: fetchedData.gr_no || fetchedData.pre_gr_entry?.gr_no || '',
-              gr_dt: fetchedData.gr_dt || fetchedData.pre_gr_entry?.gr_dt || '',
-              // Calculate net weight if not provided by RPC
-              net_wt: fetchedData.net_wt || (fetchedData.pre_gr_entry?.ladden_wt || 0) - (fetchedData.pre_gr_entry?.empty_wt || 0)
-            };
-            
-            setGqrData(completeData);
-            setWeights(prev => ({
-              ...prev,
-              exportQuality: { kgs: fetchedData.export_quality_weight || '' },
-              rot: { kgs: fetchedData.rot_weight || '' },
-              doubles: { kgs: fetchedData.doubles_weight || '' },
-              sand: { kgs: fetchedData.sand_weight || '' },
-              weightShortage: { kgs: fetchedData.weight_shortage_weight || '' },
-              gapItems: { kgs: fetchedData.gap_items_weight || '' },
-              podi: { kgs: fetchedData.podi_weight || '' },
-            }));
-            setFinalBagCounts({
-              podi_bags: '',
-              gap_item1_bags: '',
-              gap_item2_bags: '',
-            });
-
-          } else {
-            setError('GQR not found.');
-          }
-        }
       } catch (err) {
         setError(`Failed to fetch data: ${err.message}`);
         console.error(err);

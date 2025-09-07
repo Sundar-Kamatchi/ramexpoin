@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { fetchGQRWithRelationships } from '@/lib/gqrDataFetcher';
 import { GQRPrint } from '@/utils/gqr_print';
 import { formatDateDDMMYYYY } from '@/utils/dateUtils';
 import { toast } from 'sonner';
@@ -50,29 +51,121 @@ export default function GQRWorkingPage() {
     setSessionLoading(authLoading);
   }, [authLoading]);
 
-  // Fetch unfinalized GQRs
+  // Fetch unfinalized GQRs - Test approach to isolate the issue
   const fetchUnfinalizedGQRs = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      console.log('GQR Working: Testing basic Supabase connection...');
+      
+      // Test 1: Try to fetch ANY data from gqr_entry table
+      console.log('GQR Working: Test 1 - Basic count query...');
+      const { count, error: countError } = await supabase
         .from('gqr_entry')
-        .select(`
-          id,
-          created_at,
-          total_value_received,
-          gqr_status,
-          pre_gr_entry!gqr_entry_pre_gr_id_fkey (
-            gr_no,
-            net_wt,
-            gr_dt,
-            suppliers ( name )
-          )
-        `)
-        .order('created_at', { ascending: false });
+        .select('*', { count: 'exact', head: true });
 
-      if (error) throw error;
-      setGqrList(data || []);
+      if (countError) {
+        console.error('GQR Working: Even count query failed:', countError);
+        throw countError;
+      }
+
+      console.log('GQR Working: Count query successful, count:', count);
+
+      // Test 2: Try to fetch just one field
+      console.log('GQR Working: Test 2 - Single field query...');
+      const { data: testData, error: testError } = await supabase
+        .from('gqr_entry')
+        .select('id')
+        .limit(5);
+
+      if (testError) {
+        console.error('GQR Working: Single field query failed:', testError);
+        throw testError;
+      }
+
+      console.log('GQR Working: Single field query successful, data:', testData);
+
+      // Test 3: Try to fetch multiple fields but no relationships
+      console.log('GQR Working: Test 3 - Multiple fields query...');
+      const { data: gqrData, error: gqrError } = await supabase
+        .from('gqr_entry')
+        .select('id, created_at, total_value_received, gqr_status, pre_gr_id')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (gqrError) {
+        console.error('GQR Working: Multiple fields query failed:', gqrError);
+        throw gqrError;
+      }
+
+      console.log('GQR Working: Multiple fields query successful, data length:', gqrData?.length || 0);
+
+      // Now fetch related data for each GQR individually
+      const result = [];
+      for (const gqr of gqrData || []) {
+        let preGrData = null;
+        let supplierData = null;
+        
+        // Fetch Pre-GR data if exists
+        if (gqr.pre_gr_id) {
+          try {
+            const { data: preGr, error: preGrError } = await supabase
+              .from('pre_gr_entry')
+              .select('id, gr_no, gr_dt, po_id')
+              .eq('id', gqr.pre_gr_id)
+              .single();
+            
+            if (!preGrError && preGr) {
+              preGrData = preGr;
+              
+              // Fetch supplier data if PO exists
+              if (preGr.po_id) {
+                try {
+                  const { data: po, error: poError } = await supabase
+                    .from('purchase_orders')
+                    .select('id, supplier_id')
+                    .eq('id', preGr.po_id)
+                    .single();
+                  
+                  if (!poError && po && po.supplier_id) {
+                    const { data: supplier, error: supplierError } = await supabase
+                      .from('suppliers')
+                      .select('id, name')
+                      .eq('id', po.supplier_id)
+                      .single();
+                    
+                    if (!supplierError && supplier) {
+                      supplierData = supplier;
+                    }
+                  }
+                } catch (poErr) {
+                  console.warn('GQR Working: PO query failed for GQR', gqr.id, ':', poErr);
+                }
+              }
+            }
+          } catch (preGrErr) {
+            console.warn('GQR Working: Pre-GR query failed for GQR', gqr.id, ':', preGrErr);
+          }
+        }
+        
+        // Combine the data
+        result.push({
+          ...gqr,
+          pre_gr_entry: preGrData ? {
+            ...preGrData,
+            suppliers: supplierData
+          } : {
+            gr_no: 'N/A',
+            gr_dt: null,
+            suppliers: { name: 'N/A' }
+          }
+        });
+      }
+
+      setGqrList(result);
+      console.log('GQR Working: Successfully loaded with test approach:', result.length, 'entries');
+      
     } catch (err) {
+      console.error('GQR Working: Test approach failed:', err);
       setError('Failed to load GQRs: ' + err.message);
     } finally {
       setLoading(false);
@@ -97,61 +190,114 @@ export default function GQRWorkingPage() {
       console.log('GQR Working: Fetching details for GQR ID:', selectedGqr);
       setLoading(true);
       
-      // Try the RPC function first
-      const { data: rpcData, error: rpcError } = await supabase.rpc('get_gqr_details_by_id', { 
-        p_gqr_id: selectedGqr
-      });
+      // Fetch GQR data
+      const { data: gqrData, error: gqrError } = await supabase
+        .from('gqr_entry')
+        .select('*')
+        .eq('id', selectedGqr)
+        .single();
       
-      if (rpcError) {
-        console.warn('GQR Working: RPC function failed, trying direct query:', rpcError);
-        
-        // Fallback: Direct query approach
-        const { data: directData, error: directError } = await supabase
-          .from('gqr_entry')
-          .select(`
-            id,
-            created_at,
-            total_value_received,
-            export_quality_weight,
-            podi_weight,
-            rot_weight,
-            doubles_weight,
-            sand_weight,
-            weight_shortage_weight,
-            gap_items_weight,
-            volatile_po_rate,
-            volatile_gap_item_rate,
-            volatile_podi_rate,
-            volatile_wastage_kgs_per_ton,
-            gqr_status,
-            pre_gr_entry!gqr_entry_pre_gr_id_fkey (
-              id,
-              gr_no,
-              gr_dt,
-              date,
-              net_wt,
-              ladden_wt,
-              empty_wt,
-              purchase_orders (
-                vouchernumber,
-                date,
-                rate,
-                podi_rate,
-                quantity,
-                damage_allowed_kgs_ton,
-                cargo,
-                created_at,
-                suppliers ( name ),
-                item_master ( item_name )
-              )
-            )
-          `)
-          .eq('id', selectedGqr)
-          .single();
-        
-        if (directError) {
-          throw new Error(`Direct query failed: ${directError.message}`);
+      if (gqrError) {
+        console.error('GQR Working: GQR query failed:', gqrError);
+        throw gqrError;
+      }
+      
+      if (!gqrData) {
+        throw new Error('GQR not found');
+      }
+      
+      console.log('GQR Working: GQR data fetched:', gqrData);
+      
+      // Fetch related data if pre_gr_id exists
+      let preGrData = null;
+      let supplierData = null;
+      let itemData = null;
+      let poData = null;
+      
+      if (gqrData.pre_gr_id) {
+        try {
+          // Fetch Pre-GR data
+          const { data: preGr, error: preGrError } = await supabase
+            .from('pre_gr_entry')
+            .select('id, gr_no, gr_dt, net_wt, po_id')
+            .eq('id', gqrData.pre_gr_id)
+            .single();
+
+          if (!preGrError && preGr) {
+            preGrData = preGr;
+
+            // Fetch Purchase Order data if PO exists
+            if (preGr.po_id) {
+              const { data: po, error: poError } = await supabase
+                .from('purchase_orders')
+                .select('id, vouchernumber, rate, podi_rate, supplier_id, item_id, cargo, damage_allowed_kgs_ton')
+                .eq('id', preGr.po_id)
+                .single();
+
+              if (!poError && po) {
+                poData = po;
+
+                // Fetch Supplier data
+                if (po.supplier_id) {
+                  const { data: supplier, error: supplierError } = await supabase
+                    .from('suppliers')
+                    .select('id, name')
+                    .eq('id', po.supplier_id)
+                    .single();
+
+                  if (!supplierError && supplier) {
+                    supplierData = supplier;
+                  }
+                }
+
+                // Fetch Item data
+                if (po.item_id) {
+                  const { data: item, error: itemError } = await supabase
+                    .from('item_master')
+                    .select('id, item_name')
+                    .eq('id', po.item_id)
+                    .single();
+
+                  if (!itemError && item) {
+                    itemData = item;
+                  }
+                }
+              }
+            }
+          }
+        } catch (relatedErr) {
+          console.warn('GQR Working: Related data fetch failed:', relatedErr);
         }
+      }
+      
+      // Create data structure with actual fetched data
+      const directData = {
+        ...gqrData,
+        pre_gr_entry: preGrData ? {
+          ...preGrData,
+          purchase_orders: poData ? {
+            ...poData,
+            suppliers: supplierData,
+            item_master: itemData
+          } : {
+            vouchernumber: 'N/A',
+            rate: 0,
+            podi_rate: 0,
+            suppliers: { name: 'N/A' },
+            item_master: { item_name: 'N/A' }
+          }
+        } : {
+          gr_no: 'N/A',
+          net_wt: 0,
+          purchase_orders: {
+            vouchernumber: 'N/A',
+            rate: 0,
+            podi_rate: 0,
+            suppliers: { name: 'N/A' },
+            item_master: { item_name: 'N/A' }
+          }
+        }
+      };
         
         console.log('GQR Working: Direct query result:', directData);
         console.log('GQR Working: Weight shortage from DB:', directData.weight_shortage_weight);
@@ -186,8 +332,8 @@ export default function GQRWorkingPage() {
           net_wt: directData.pre_gr_entry?.net_wt || ((directData.pre_gr_entry?.ladden_wt || 0) - (directData.pre_gr_entry?.empty_wt || 0)),
           supplier_name: directData.pre_gr_entry?.purchase_orders?.suppliers?.name,
           item_name: directData.pre_gr_entry?.purchase_orders?.item_master?.item_name,
-          assured_cargo_percent: directData.pre_gr_entry?.purchase_orders?.cargo,
-          damage_allowed_kgs_ton: directData.pre_gr_entry?.purchase_orders?.damage_allowed_kgs_ton
+          assured_cargo_percent: directData.pre_gr_entry?.purchase_orders?.cargo || 'N/A',
+          damage_allowed_kgs_ton: directData.pre_gr_entry?.purchase_orders?.damage_allowed_kgs_ton || 'N/A'
         };
         
         console.log('GQR Working: Setting GQR data:', gqr);
@@ -226,55 +372,6 @@ export default function GQRWorkingPage() {
         setAdjustableDamageAllowed(damageAllowed);
         
         setLoading(false);
-      } else {
-        // RPC function worked
-        console.log('GQR Working: RPC result:', rpcData);
-        console.log('GQR Working: Weight shortage from RPC:', rpcData[0]?.weight_shortage_weight);
-        console.log('GQR Working: GR DT from RPC:', rpcData[0]?.gr_dt);
-        if (rpcData && rpcData.length > 0) {
-          const gqr = {
-            ...rpcData[0],
-            gqr_status: rpcData[0].gqr_status || 'Open',
-            gr_dt: rpcData[0].gr_dt,
-            pre_gr_date: rpcData[0].pre_gr_date || rpcData[0].date,
-            vouchernumber: rpcData[0].vouchernumber // FIXED: Ensure vouchernumber is properly set from RPC result
-          };
-          console.log('GQR Working: Setting GQR data from RPC:', gqr);
-          console.log('GQR Working: Weight shortage in final GQR data from RPC:', gqr.weight_shortage_weight);
-          setGqrData(gqr);
-          
-          // Set actual values from GQR data
-          setActualValues(prev => ({
-            ...prev,
-            cargoWeight: gqr.net_wt || 0,
-            podiWeight: gqr.podi_weight || 0,
-            wastageWeight: (gqr.rot_weight || 0) + (gqr.doubles_weight || 0) + (gqr.sand_weight || 0) + (gqr.weight_shortage_weight || 0),
-            gapWeight: gqr.gap_items_weight || 0,
-            ratePerKg: gqr.volatile_po_rate || gqr.rate || 0,
-            podiRatePerKg: gqr.volatile_podi_rate || gqr.podi_rate || 0,
-            gapRatePerKg: gqr.volatile_gap_item_rate || gqr.rate || 0,
-            wastageKgs: (gqr.rot_weight || 0) + (gqr.doubles_weight || 0) + (gqr.sand_weight || 0) + (gqr.weight_shortage_weight || 0),
-            rotWeight: gqr.rot_weight || 0,
-            doublesWeight: gqr.doubles_weight || 0,
-            sandWeight: gqr.sand_weight || 0,
-            weightShortage: gqr.weight_shortage_weight || 0,
-          }));
-          
-          // Set estimated values with PO rates
-          setEstimatedValues(prev => ({
-            ...prev,
-            ratePerKg: gqr.rate || 10,
-            podiRatePerKg: gqr.podi_rate || 6,
-            damageAllowedKgsPerTon: gqr.damage_allowed_kgs_ton || 100,
-          }));
-          
-          // Set adjustable damage allowed value from PO or volatile field
-          const damageAllowed = gqr.volatile_wastage_kgs_per_ton || gqr.damage_allowed_kgs_ton || 100;
-          console.log('GQR Working: Setting adjustable damage allowed from RPC:', damageAllowed);
-          setAdjustableDamageAllowed(damageAllowed);
-        }
-        setLoading(false);
-      }
     } catch (error) {
       console.error('GQR Working: Error fetching GQR details:', error);
       setError(error.message);
@@ -513,7 +610,7 @@ export default function GQRWorkingPage() {
             <option value="">Select a GQR...</option>
             {gqrList.map((gqr) => (
               <option key={gqr.id} value={gqr.id}>
-                GQR #{gqr.id} - {gqr.pre_gr_entry?.gr_no || gqr.pre_gr_entry?.vouchernumber} - {gqr.pre_gr_entry?.suppliers?.name}
+                GQR #{gqr.id} - {gqr.pre_gr_entry?.gr_no || 'N/A'} - {gqr.pre_gr_entry?.gr_dt ? new Date(gqr.pre_gr_entry.gr_dt).toLocaleDateString() : 'N/A'} - {gqr.pre_gr_entry?.suppliers?.name || 'N/A'}
               </option>
             ))}
           </select>

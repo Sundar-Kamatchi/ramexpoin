@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
+import { fetchGQRListWithRelationships } from '@/lib/gqrDataFetcher';
 import { Button } from '@/components/ui/button';
 import { formatDateDDMMYYYY } from '@/utils/dateUtils';
 
@@ -15,77 +16,48 @@ export default function GQRListPage() {
     setLoading(true);
     setError(null);
     try {
-      // First, try a simple query to see what columns exist
-      console.log('Testing basic gqr_entry query...');
-      const { data: basicData, error: basicError } = await supabase
-        .from('gqr_entry')
-        .select('id, created_at, total_value_received')
-        .limit(5);
-
-      if (basicError) {
-        console.error('Basic query error:', basicError);
-        throw basicError;
-      }
-
-      console.log('Basic query successful, data:', basicData);
-
-      // Try a simpler query that should work regardless of column status
-              const { data, error: fetchError } = await supabase
-          .from('gqr_entry')
-          .select(`
-            id,
-            created_at,
-            total_value_received,
-            pre_gr_entry!gqr_entry_pre_gr_id_fkey (
-              gr_no,
-              gr_dt,
-              purchase_orders (
-                vouchernumber,
-                date,
-                suppliers ( name )
-              )
-            )
-          `)
-          .order('created_at', { ascending: false });
-
-      if (fetchError) {
-        console.error('Full query error:', fetchError);
-        
-        // Fallback: try without the new gr_no column
-        console.log('Trying fallback query without gr_no...');
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('gqr_entry')
-          .select(`
-            id,
-            created_at,
-            total_value_received,
-            pre_gr_entry!gqr_entry_pre_gr_id_fkey (
-              gr_no,
-              gr_dt,
-              purchase_orders (
-                vouchernumber,
-                date,
-                suppliers ( name )
-              )
-            )
-          `)
-          .order('created_at', { ascending: false });
-
-        if (fallbackError) {
-          console.error('Fallback query also failed:', fallbackError);
-          throw fallbackError;
-        }
-        
-        console.log('Fallback query successful, data:', fallbackData);
-        setGqrEntries(fallbackData || []);
-        return;
-      }
+      console.log('GQR List: Using production-safe separate queries approach...');
       
-      console.log('Full query successful, data:', data);
-      setGqrEntries(data || []);
+      // Use production-safe separate queries approach directly
+      const data = await fetchGQRListWithRelationships();
+      setGqrEntries(data);
+      console.log('GQR List: Separate queries successful with', data.length, 'entries');
+      
     } catch (err) {
-      console.error('Full error details:', err);
-      setError('Failed to load GQR entries: ' + (err.message || 'Unknown error'));
+      console.error('GQR List: Separate queries failed, trying simple fallback:', err);
+        
+      // Final fallback: Simple query without relationships
+      try {
+        const { data: simpleData, error: simpleError } = await supabase
+          .from('gqr_entry')
+          .select('id, created_at, total_value_received')
+          .order('created_at', { ascending: false });
+
+        if (simpleError) {
+          throw simpleError;
+        }
+
+        // Transform to expected structure
+        const transformedData = simpleData.map(item => ({
+          ...item,
+          pre_gr_entry: {
+            gr_no: 'N/A',
+            gr_dt: null,
+            purchase_orders: {
+              vouchernumber: 'N/A',
+              date: null,
+              suppliers: { name: 'N/A' }
+            }
+          }
+        }));
+
+        setGqrEntries(transformedData);
+        console.log('GQR List: Simple fallback successful with', transformedData.length, 'entries');
+        
+      } catch (fallbackError) {
+        console.error('GQR List: All approaches failed:', fallbackError);
+        setError('Failed to load GQR entries: ' + (fallbackError.message || 'Unknown error'));
+      }
     } finally {
       setLoading(false);
     }
