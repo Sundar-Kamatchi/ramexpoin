@@ -59,8 +59,8 @@ export default function Home() {
                     </div>
                 </Link>
 
-                {/* Card 4: Reports & Analysis - Orange Theme */}
-                <Link href="/reports" passHref>
+                {/* Card 4: Reports & Analysis - Orange Theme - TEMPORARILY REMOVED */}
+                {/* <Link href="/reports" passHref>
                     <div className="bg-orange-50/80 dark:bg-orange-900/60 text-orange-900 dark:text-orange-100 border border-orange-200/60 dark:border-orange-700/50 rounded-3xl shadow-lg hover:shadow-2xl shadow-orange-900/10 dark:shadow-orange-900/30 transition-all duration-300 ease-in-out cursor-pointer flex flex-col items-center justify-center text-center p-7 min-h-[190px] transform hover:-translate-y-1.5 hover:bg-orange-100/70 dark:hover:bg-orange-900/70 backdrop-blur">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 text-orange-600 dark:text-orange-400 mb-4">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125v-6.75ZM10.5 12.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v7.5c0 .621-.504 1.125-1.125 1.125h-2.25c-.621 0-1.125-.504-1.125-1.125v-7.5ZM17.25 6.75c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v12.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V6.75Z" />
@@ -68,7 +68,7 @@ export default function Home() {
                         <h2 className="text-xl font-semibold mb-1 text-shadow">Reports & Analysis</h2>
                         <p className="text-sm opacity-90 text-shadow-sm">Gain insights with yield comparisons and other reports.</p>
                     </div>
-                </Link>
+                </Link> */}
 
                 {/* Card 5: Masters - Indigo Theme */}
                 <Link href="/masters" passHref>
