@@ -16,7 +16,6 @@ RETURNS TABLE (
   po_rate NUMERIC,
   po_quantity NUMERIC,
   podi_rate NUMERIC,
-  damage_allowed NUMERIC,
   cargo NUMERIC,
   damage_allowed_kgs_ton NUMERIC
 ) 
@@ -39,7 +38,6 @@ BEGIN
     po.rate as po_rate,
     po.quantity as po_quantity,
     po.podi_rate,
-    po.damage_allowed,
     po.cargo,
     po.damage_allowed_kgs_ton
   FROM pre_gr_entry pre
