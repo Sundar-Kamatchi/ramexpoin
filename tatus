@@ -1,0 +1,5 @@
+[33m38203b7[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Remove unnecessary gqr-data-viewer.html file to avoid deployment confusion
+[33m60c1b19[m[33m ([m[1;31morigin/main[m[33m)[m production and development issue
+[33mad37b6d[m[33m ([m[1;31morigin/backup-working-state[m[33m, [m[1;32mbackup-working-state[m[33m)[m feat: Complete GQR system fixes and improvements
+[33mfd6f1aa[m gqr listing error fixed
+[33m07f586b[m Before merging gr no with gqr no
