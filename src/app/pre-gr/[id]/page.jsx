@@ -38,6 +38,7 @@ export default function PreGRPage() {
     const [selectedPoId, setSelectedPoId] = useState(null);
     const [selectedPo, setSelectedPo] = useState(null);
     const [poVoucherNumber, setPoVoucherNumber] = useState('');
+    const [poDate, setPoDate] = useState('');
     const [supplierName, setSupplierName] = useState('');
     const [supplierAddress, setSupplierAddress] = useState('');
     const [loadedFrom, setLoadedFrom] = useState('');
@@ -74,29 +75,31 @@ export default function PreGRPage() {
         const fetchData = async () => {
             setLoading(true);
             try {
-                console.log('Pre-GR Page: Starting to fetch data...');
 
-                const [poRes, supRes, itemRes, gapRes] = await Promise.all([
-                    supabase.from('purchase_orders').select('id, vouchernumber, date, supplier_id, item_id, quantity, rate, cargo, damage_allowed_kgs_ton, suppliers(name)'),
-                    supabase.from('suppliers').select('id, name, address'),
-                    supabase.from('item_master').select('id, item_name'),
-                    supabase.from('gap_items').select('id, name')
-                ]);
+                // Fetch data from all tables
+                const poRes = await supabase.from('purchase_orders').select('*');
+                const supRes = await supabase.from('suppliers').select('id, name, address');
+                const itemRes = await supabase.from('item_master').select('id, item_name');
+                const gapRes = await supabase.from('gap_items').select('id, name');
 
                 if (poRes.error) {
                     console.error('Pre-GR Page: Error fetching POs:', poRes.error);
+                    console.error('Pre-GR Page: Error details:', JSON.stringify(poRes.error, null, 2));
                     throw poRes.error;
                 }
                 if (supRes.error) {
                     console.error('Pre-GR Page: Error fetching suppliers:', supRes.error);
+                    console.error('Pre-GR Page: Supplier error details:', JSON.stringify(supRes.error, null, 2));
                     throw supRes.error;
                 }
                 if (itemRes.error) {
                     console.error('Pre-GR Page: Error fetching items:', itemRes.error);
+                    console.error('Pre-GR Page: Item error details:', JSON.stringify(itemRes.error, null, 2));
                     throw itemRes.error;
                 }
                 if (gapRes.error) {
                     console.error('Pre-GR Page: Error fetching gap items:', gapRes.error);
+                    console.error('Pre-GR Page: Gap item error details:', JSON.stringify(gapRes.error, null, 2));
                     throw gapRes.error;
                 }
 
@@ -105,20 +108,7 @@ export default function PreGRPage() {
                 const itemsData = itemRes.data || [];
                 const gapItemsData = gapRes.data || [];
                 
-                console.log('Pre-GR Page: Fetched data - POs:', poData.length, 'Suppliers:', suppliersData.length, 'Items:', itemsData.length, 'Gap Items:', gapItemsData.length);
                 
-                // Debug: Log the first PO to see its structure
-                if (poData.length > 0) {
-                    console.log('Pre-GR Page: First PO data structure:', poData[0]);
-                    console.log('Pre-GR Page: Available columns in PO:', Object.keys(poData[0]));
-                    console.log('Pre-GR Page: damage_allowed_kgs_ton value:', poData[0].damage_allowed_kgs_ton);
-                    console.log('Pre-GR Page: damage_allowed_kgs_ton type:', typeof poData[0].damage_allowed_kgs_ton);
-                    
-                    // Check all POs for damage_allowed_kgs_ton
-                    poData.forEach((po, index) => {
-                        console.log(`Pre-GR Page: PO ${index + 1} (${po.vouchernumber}): damage_allowed_kgs_ton =`, po.damage_allowed_kgs_ton);
-                    });
-                }
                 
                 setPurchaseOrders(poData);
                 setSuppliers(suppliersData);
@@ -126,21 +116,19 @@ export default function PreGRPage() {
                 setGapItems(gapItemsData);
 
                 if (id && id !== 'new') {
-                    console.log('Pre-GR Page: Editing existing entry with ID:', id);
                     const { data: entryData, error: entryError } = await supabase.from('pre_gr_entry').select('*').eq('id', parseInt(id)).single();
                     if (entryError) {
                         console.error('Pre-GR Page: Error fetching entry:', entryError);
                         throw entryError;
                     }
                     if (entryData) {
-                        console.log('Pre-GR Page: Found entry data:', entryData);
                         setPreGREntryId(entryData.id);
                         setSelectedPoId(entryData.po_id);
                         const po = poData.find(p => p.id === entryData.po_id);
                         if (po) {
-                            console.log('Pre-GR Page: Found PO for entry:', po);
                             setSelectedPo(po);
                             setPoVoucherNumber(po.vouchernumber);
+                            setPoDate(po.date ? formatDateDDMMYYYY(po.date) : '');
                             const supplier = suppliersData.find(s => s.id === po.supplier_id);
                             if (supplier) {
                                 setSupplierName(supplier.name);
@@ -150,10 +138,33 @@ export default function PreGRPage() {
                             setItemQuality(poItem ? poItem.item_name : '');
                             setPoQuantity(po.quantity?.toString() || '');
                             setPoRate(po.rate?.toString() || '');
-                            setPoDamageAllowed(po.damage_allowed_kgs_ton?.toString() || '');
-                            setPoCargo(po.cargo?.toString() || '');
+                            console.log('Initial load - damage_allowed_kgs_ton:', po.damage_allowed_kgs_ton);
+                            console.log('Initial load - damage_allowed:', po.damage_allowed);
+                            console.log('Initial load - cargo:', po.cargo);
+                            // Try multiple field names for damage
+                            const damageValue = po.damage_allowed_kgs_ton || po.damage_allowed || po.damage_per_ton || po.damage_allowance;
+                            console.log('Setting damage value:', damageValue, 'from fields:', {
+                                damage_allowed_kgs_ton: po.damage_allowed_kgs_ton,
+                                damage_allowed: po.damage_allowed,
+                                damage_per_ton: po.damage_per_ton,
+                                damage_allowance: po.damage_allowance
+                            });
+                            setPoDamageAllowed(damageValue ? damageValue.toString() : '');
+                            console.log('After setting poDamageAllowed, current value:', damageValue ? damageValue.toString() : '');
+                            
+                            // Try multiple field names for cargo
+                            const cargoValue = po.cargo || po.cargo_percentage || po.assured_cargo || po.cargo_assured || po.assured_cargo_percentage;
+                            console.log('Setting cargo value:', cargoValue, 'from fields:', {
+                                cargo: po.cargo,
+                                cargo_percentage: po.cargo_percentage,
+                                assured_cargo: po.assured_cargo,
+                                cargo_assured: po.cargo_assured,
+                                assured_cargo_percentage: po.assured_cargo_percentage
+                            });
+                            setPoCargo(cargoValue ? cargoValue.toString() : '');
+                            console.log('After setting poCargo, current value:', cargoValue ? cargoValue.toString() : '');
                         }
-                        setGrDate(formatDateDDMMYYYY(entryData.date));
+                        setGrDate(entryData.gr_dt ? formatDateDDMMYYYY(entryData.gr_dt) : formatDateDDMMYYYY(new Date()));
                         setLoadedFrom(entryData.loaded_from || '');
                         setVehicleNo(entryData.vehicle_no || '');
                         setBags(entryData.bags?.toString() || '');
@@ -176,13 +187,11 @@ export default function PreGRPage() {
                         setAdvanceAmount(entryData.admin_approved_advance && entryData.admin_approved_advance > 0 ? entryData.admin_approved_advance.toString() : '');
                     }
                 } else {
-                    console.log('Pre-GR Page: Creating new entry');
                 }
             } catch (err) {
                 console.error('Pre-GR Page: Error in fetchData:', err);
                 toast.error(`Failed to fetch data: ${err.message}`);
             } finally {
-                console.log('Pre-GR Page: Setting loading to false');
                 setLoading(false);
             }
         };
@@ -208,6 +217,7 @@ export default function PreGRPage() {
                 
                 setSelectedPo(po);
                 setPoVoucherNumber(po.vouchernumber || '');
+                setPoDate(po.date ? formatDateDDMMYYYY(po.date) : '');
                 const supplier = suppliers.find(s => s.id === po.supplier_id);
                 setSupplierName(supplier?.name || '');
                 setSupplierAddress(supplier?.address || '');
@@ -215,16 +225,17 @@ export default function PreGRPage() {
                 setItemQuality(item?.item_name || '');
                 setPoQuantity(po.quantity?.toString() || '');
                 setPoRate(po.rate?.toString() || '');
-                const damageValue = po.damage_allowed_kgs_ton?.toString() || '';
-                console.log('Setting poDamageAllowed to:', damageValue);
-                setPoDamageAllowed(damageValue);
-                setPoCargo(po.cargo?.toString() || '');
+                // Try multiple field names for damage
+                const damageValue = po.damage_allowed_kgs_ton || po.damage_allowed || po.damage_per_ton || po.damage_allowance;
+                // Try multiple field names for cargo
+                const cargoValue = po.cargo || po.cargo_percentage || po.assured_cargo || po.cargo_assured || po.assured_cargo_percentage;
+                setPoDamageAllowed(damageValue ? damageValue.toString() : '');
+                setPoCargo(cargoValue ? cargoValue.toString() : '');
             } else {
-                console.log('PO not found for ID:', selectedPoId);
-                console.log('Available POs:', purchaseOrders.map(p => ({ id: p.id, vouchernumber: p.vouchernumber })));
             }
         }
     }, [selectedPoId, purchaseOrders, suppliers, items]);
+
 
     useEffect(() => {
         const ladenKgs = parseFloat(ladenWtKgs) || 0;
@@ -335,7 +346,7 @@ export default function PreGRPage() {
     const goodsWtKgsRemainder = goodsWtKgs ? (parseFloat(goodsWtKgs) % 1000).toString() : '';
 
     const printData = {
-        grNo, grDate, poVoucherNumber, selectedPo, supplierName, itemQuality, loadedFrom, vehicleNo, weightBridgeName, bags,
+        grNo, grDate, poDate, poVoucherNumber, selectedPo, supplierName, itemQuality, loadedFrom, vehicleNo, weightBridgeName, bags,
         poDamageAllowed, poCargo, 
         ladenWtTons, ladenWtKgs: ladenWtKgsRemainder, 
         emptyWtTons, emptyWtKgs: emptyWtKgsRemainder, 
@@ -372,37 +383,19 @@ export default function PreGRPage() {
                 </h2>
 
                 <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mb-8">
-                    {/* PO Selection and Details */}
+                    {/* PO Details - Edit Mode (No Selection) */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                        <div>
-                            <label htmlFor="poSelect" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Select Purchase Order</label>
-                            <select id="poSelect" className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 dark:text-gray-200" value={selectedPoId || ''} onChange={(e) => setSelectedPoId(parseInt(e.target.value))} disabled={!!preGREntryId}>
-                                <option value="">-- Select PO --</option>
-                                {purchaseOrders.map((po) => {
-                                    const supplier = suppliers.find(s => s.id === po.supplier_id);
-                                    return (
-                                        <option key={po.id} value={po.id}>
-                                            {po.vouchernumber} - {formatDateDDMMYYYY(po.date)} - {supplier?.name || 'Unknown Supplier'}
-                                        </option>
-                                    );
-                                })}
-                            </select>
-                        </div>
                         <div>
                             <label htmlFor="poVoucherNumber" className="block text-sm font-medium text-gray-700 dark:text-gray-300">PO Voucher Number</label>
                             <input type="text" id="poVoucherNumber" className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm bg-gray-100 dark:bg-gray-700 cursor-not-allowed" value={poVoucherNumber} readOnly/>
                         </div>
                         <div>
-                            <label htmlFor="grDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">GR Date</label>
-                            <input type="text" id="grDate" className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm bg-white dark:bg-gray-700 px-2" value={grDate} disabled={isApprovalSectionDisabledForNonAdmin} onChange={e => setGrDate(e.target.value)} placeholder="DD/MM/YYYY"/>
+                            <label htmlFor="poDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">PO Date</label>
+                            <input type="text" id="poDate" className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm bg-gray-100 dark:bg-gray-700 cursor-not-allowed" value={poDate} readOnly/>
                         </div>
                         <div>
                             <label htmlFor="supplierName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Supplier Name</label>
                             <input type="text" id="supplierName" className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm bg-gray-100 dark:bg-gray-700 cursor-not-allowed" value={supplierName} readOnly/>
-                        </div>
-                        <div>
-                            <label htmlFor="supplierAddress" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Supplier Address</label>
-                            <input type="text" id="supplierAddress" className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm bg-gray-100 dark:bg-gray-700 cursor-not-allowed" value={supplierAddress} readOnly/>
                         </div>
                         <div>
                             <label htmlFor="itemQuality" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Item / Quality</label>
@@ -449,10 +442,6 @@ export default function PreGRPage() {
 
                     {/* Weight Details */}
                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                         <div>
-                            <label htmlFor="weightBridgeName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Weight Bridge Name</label>
-                            <input type="text" id="weightBridgeName" className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm bg-white dark:bg-gray-700 px-2" value={weightBridgeName} onChange={(e) => setWeightBridgeName(e.target.value)} disabled={isApprovalSectionDisabledForNonAdmin}/>
-                        </div>
                         <div>
                             <label htmlFor="grNo" className="block text-sm font-medium text-gray-700 dark:text-gray-300">GR No.</label>
                             <input type="text" id="grNo" className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm bg-white dark:bg-gray-700 px-2" value={grNo} onChange={(e) => setGrNo(e.target.value)}/>
@@ -460,6 +449,10 @@ export default function PreGRPage() {
                         <div>
                             <label htmlFor="grDt" className="block text-sm font-medium text-gray-700 dark:text-gray-300">GR Dt.</label>
                             <input type="text" id="grDt" className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm bg-white dark:bg-gray-700 px-2" value={grDt} onChange={e => setGrDt(e.target.value)} placeholder="DD/MM/YYYY"/>
+                        </div>
+                        <div>
+                            <label htmlFor="weightBridgeName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Weight Bridge Name</label>
+                            <input type="text" id="weightBridgeName" className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm bg-white dark:bg-gray-700 px-2" value={weightBridgeName} onChange={(e) => setWeightBridgeName(e.target.value)} disabled={isApprovalSectionDisabledForNonAdmin}/>
                         </div>
                     </div>
                     
