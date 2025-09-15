@@ -55,7 +55,6 @@ export default function PreGRPage() {
     const [poCargo, setPoCargo] = useState('');
     const [ladenWtKgs, setLadenWtKgs] = useState('');
     const [emptyWtKgs, setEmptyWtKgs] = useState('');
-    const [goodsWtKgs, setGoodsWtKgs] = useState('');
     const [podiBags, setPodiBags] = useState('');
     const [gapItem1Id, setGapItem1Id] = useState(null);
     const [gapItem1Bags, setGapItem1Bags] = useState('');
@@ -138,31 +137,13 @@ export default function PreGRPage() {
                             setItemQuality(poItem ? poItem.item_name : '');
                             setPoQuantity(po.quantity?.toString() || '');
                             setPoRate(po.rate?.toString() || '');
-                            console.log('Initial load - damage_allowed_kgs_ton:', po.damage_allowed_kgs_ton);
-                            console.log('Initial load - damage_allowed:', po.damage_allowed);
-                            console.log('Initial load - cargo:', po.cargo);
                             // Try multiple field names for damage
                             const damageValue = po.damage_allowed_kgs_ton || po.damage_allowed || po.damage_per_ton || po.damage_allowance;
-                            console.log('Setting damage value:', damageValue, 'from fields:', {
-                                damage_allowed_kgs_ton: po.damage_allowed_kgs_ton,
-                                damage_allowed: po.damage_allowed,
-                                damage_per_ton: po.damage_per_ton,
-                                damage_allowance: po.damage_allowance
-                            });
                             setPoDamageAllowed(damageValue ? damageValue.toString() : '');
-                            console.log('After setting poDamageAllowed, current value:', damageValue ? damageValue.toString() : '');
                             
                             // Try multiple field names for cargo
                             const cargoValue = po.cargo || po.cargo_percentage || po.assured_cargo || po.cargo_assured || po.assured_cargo_percentage;
-                            console.log('Setting cargo value:', cargoValue, 'from fields:', {
-                                cargo: po.cargo,
-                                cargo_percentage: po.cargo_percentage,
-                                assured_cargo: po.assured_cargo,
-                                cargo_assured: po.cargo_assured,
-                                assured_cargo_percentage: po.assured_cargo_percentage
-                            });
                             setPoCargo(cargoValue ? cargoValue.toString() : '');
-                            console.log('After setting poCargo, current value:', cargoValue ? cargoValue.toString() : '');
                         }
                         setGrDate(entryData.gr_dt ? formatDateDDMMYYYY(entryData.gr_dt) : formatDateDDMMYYYY(new Date()));
                         setLoadedFrom(entryData.loaded_from || '');
@@ -187,6 +168,27 @@ export default function PreGRPage() {
                         setAdvanceAmount(entryData.admin_approved_advance && entryData.admin_approved_advance > 0 ? entryData.admin_approved_advance.toString() : '');
                     }
                 } else {
+                    // For new entries, auto-select the first available PO
+                    if (poData.length > 0) {
+                        const firstPo = poData[0];
+                        setSelectedPoId(firstPo.id);
+                        setSelectedPo(firstPo);
+                        setPoVoucherNumber(firstPo.vouchernumber || '');
+                        setPoDate(firstPo.date ? formatDateDDMMYYYY(firstPo.date) : '');
+                        const supplier = suppliersData.find(s => s.id === firstPo.supplier_id);
+                        if (supplier) {
+                            setSupplierName(supplier.name);
+                        }
+                        const poItem = itemsData.find(item => item.id === firstPo.item_id);
+                        setItemQuality(poItem ? poItem.item_name : '');
+                        setPoQuantity(firstPo.quantity?.toString() || '');
+                        setPoRate(firstPo.rate?.toString() || '');
+                        // Set damage and cargo values
+                        const damageValue = firstPo.damage_allowed_kgs_ton || firstPo.damage_allowed || firstPo.damage_per_ton || firstPo.damage_allowance;
+                        const cargoValue = firstPo.cargo || firstPo.cargo_percentage || firstPo.assured_cargo || firstPo.cargo_assured || firstPo.assured_cargo_percentage;
+                        setPoDamageAllowed(damageValue ? damageValue.toString() : '');
+                        setPoCargo(cargoValue ? cargoValue.toString() : '');
+                    }
                 }
             } catch (err) {
                 console.error('Pre-GR Page: Error in fetchData:', err);
@@ -202,18 +204,6 @@ export default function PreGRPage() {
         if (selectedPoId) {
             const po = purchaseOrders.find(p => p.id === selectedPoId);
             if (po) {
-                console.log('Selected PO data:', po);
-                console.log('PO damage_allowed_kgs_ton:', po.damage_allowed_kgs_ton);
-                console.log('PO damage_allowed_kgs_ton type:', typeof po.damage_allowed_kgs_ton);
-                console.log('All PO fields:', Object.keys(po));
-                console.log('All PO values:', Object.values(po));
-                
-                // Check if damage_allowed_kgs_ton exists in the PO object
-                if ('damage_allowed_kgs_ton' in po) {
-                    console.log('damage_allowed_kgs_ton field exists in PO object');
-                } else {
-                    console.log('damage_allowed_kgs_ton field does NOT exist in PO object');
-                }
                 
                 setSelectedPo(po);
                 setPoVoucherNumber(po.vouchernumber || '');
@@ -237,12 +227,6 @@ export default function PreGRPage() {
     }, [selectedPoId, purchaseOrders, suppliers, items]);
 
 
-    useEffect(() => {
-        const ladenKgs = parseFloat(ladenWtKgs) || 0;
-        const emptyKgs = parseFloat(emptyWtKgs) || 0;
-        const goodsWtTotal = ladenKgs - emptyKgs;
-        setGoodsWtKgs(goodsWtTotal >= 0 ? Math.round(goodsWtTotal).toString() : '');
-    }, [ladenWtKgs, emptyWtKgs]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -259,8 +243,8 @@ export default function PreGRPage() {
             return;
         }
         setLoading(true);
-        if (!selectedPoId) {
-            toast.error('Please select a Purchase Order.');
+        if (!selectedPoId || !selectedPo) {
+            toast.error('No Purchase Order available. Please ensure there are purchase orders in the system.');
             setLoading(false);
             return;
         }
@@ -268,13 +252,16 @@ export default function PreGRPage() {
         // Calculate net weight (laden weight - empty weight)
         const netWt = (parseFloat(ladenWtKgs) || 0) - (parseFloat(emptyWtKgs) || 0);
         
+        // Ensure quantity is never null - use multiple fallbacks
+        const quantityValue = selectedPo.quantity || poQuantity || 0;
+        
         const preGrData = {
             po_id: selectedPoId,
             vouchernumber: selectedPo.vouchernumber,
             date: toISODate(grDate),
             supplier_id: selectedPo.supplier_id,
             item_id: selectedPo.item_id,
-            quantity: parseFloat(selectedPo.quantity) || 0,
+            quantity: parseFloat(quantityValue) || 0,
             rate: parseFloat(selectedPo.rate) || 0,
             damage_allowed: parseFloat(selectedPo.damage_allowed_kgs_ton) || 0,
             cargo: parseFloat(selectedPo.cargo) || 0,
@@ -342,15 +329,12 @@ export default function PreGRPage() {
     const ladenWtKgsRemainder = ladenWtKgs ? (parseFloat(ladenWtKgs) % 1000).toString() : '';
     const emptyWtTons = emptyWtKgs ? Math.floor(parseFloat(emptyWtKgs) / 1000).toString() : '';
     const emptyWtKgsRemainder = emptyWtKgs ? (parseFloat(emptyWtKgs) % 1000).toString() : '';
-    const goodsWtTons = goodsWtKgs ? Math.floor(parseFloat(goodsWtKgs) / 1000).toString() : '';
-    const goodsWtKgsRemainder = goodsWtKgs ? (parseFloat(goodsWtKgs) % 1000).toString() : '';
 
     const printData = {
         grNo, grDate, poDate, poVoucherNumber, selectedPo, supplierName, itemQuality, loadedFrom, vehicleNo, weightBridgeName, bags,
         poDamageAllowed, poCargo, 
         ladenWtTons, ladenWtKgs: ladenWtKgsRemainder, 
         emptyWtTons, emptyWtKgs: emptyWtKgsRemainder, 
-        goodsWtTons, goodsWtKgs: goodsWtKgsRemainder, 
         podiBags,
         gapItem1Id, gapItem1Bags, gapItem2Id, gapItem2Bags, gapItems, isAdminApproved, advanceAmount, adminRemark, preparedBy,
         weightShortage, remarks
@@ -458,7 +442,7 @@ export default function PreGRPage() {
                     
                     <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-md mb-6">
                         <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">Weight Details</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label htmlFor="ladenWtKgs" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Laden Wt. (Kgs)</label>
                                 <input type="number" id="ladenWtKgs" placeholder="Kgs" className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm bg-white dark:bg-gray-700 text-right pr-2" value={ladenWtKgs} onChange={(e) => setLadenWtKgs(e.target.value)} disabled={isApprovalSectionDisabledForNonAdmin}/>
@@ -466,10 +450,6 @@ export default function PreGRPage() {
                             <div>
                                 <label htmlFor="emptyWtKgs" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Empty Wt. (Kgs)</label>
                                 <input type="number" id="emptyWtKgs" placeholder="Kgs" className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm bg-white dark:bg-gray-700 text-right pr-2" value={emptyWtKgs} onChange={(e) => setEmptyWtKgs(e.target.value)} disabled={isApprovalSectionDisabledForNonAdmin}/>
-                            </div>
-                            <div>
-                                <label htmlFor="goodsWtKgs" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Goods Wt. (Kgs)</label>
-                                <input type="text" id="goodsWtKgs" placeholder="Kgs" className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-right pr-2" value={goodsWtKgs} readOnly/>
                             </div>
                         </div>
                     </div>
