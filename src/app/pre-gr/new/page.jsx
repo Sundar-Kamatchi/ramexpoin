@@ -264,6 +264,7 @@ export default function CreatePreGRPage() {
                 // Auto-select the first available PO for new entries
                 if (purchaseOrdersWithSuppliers.length > 0) {
                     const firstPo = purchaseOrdersWithSuppliers[0];
+                    console.log('AUTO-SELECTING FIRST PO:', firstPo);
                     setSelectedPoId(firstPo.id);
                     setSelectedPo(firstPo);
                     setPoVoucherNumber(firstPo.vouchernumber);
@@ -275,6 +276,9 @@ export default function CreatePreGRPage() {
                     setPoRate(firstPo.rate?.toString() || '');
                     setPoDamageAllowed(firstPo.damage_allowed_kgs_ton?.toString() || '');
                     setPoCargo(firstPo.cargo?.toString() || '');
+                    console.log('PO AUTO-SELECTION COMPLETE');
+                } else {
+                    console.error('NO PURCHASE ORDERS FOUND! This will cause the form to fail.');
                 }
 
                 console.log('All data fetched successfully');
@@ -359,21 +363,31 @@ export default function CreatePreGRPage() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         
+        console.log('=== FORM SUBMISSION START ===');
+        console.log('Selected PO ID:', selectedPoId);
+        console.log('Selected PO:', selectedPo);
+        console.log('GR Number:', grNo);
+        console.log('Vehicle Number:', vehicleNo);
+        
         if (!selectedPoId) {
+            console.error('Validation failed: No PO selected');
             toast.error('Please select a Purchase Order');
             return;
         }
 
         if (!grNo.trim()) {
+            console.error('Validation failed: No GR Number');
             toast.error('Please enter GR Number');
             return;
         }
 
         if (!vehicleNo.trim()) {
+            console.error('Validation failed: No Vehicle Number');
             toast.error('Please enter Vehicle Number');
             return;
         }
 
+        console.log('Form validation passed, starting submission...');
         setLoading(true);
 
         try {
@@ -414,14 +428,25 @@ export default function CreatePreGRPage() {
             };
 
             console.log('Submitting Pre-GR entry:', preGREntry);
+            console.log('Supabase client:', supabase);
+            console.log('About to call supabase.insert...');
 
             const { data, error } = await supabase
                 .from('pre_gr_entry')
                 .insert([preGREntry])
                 .select();
 
+            console.log('Supabase response - data:', data);
+            console.log('Supabase response - error:', error);
+
             if (error) {
                 console.error('Error creating Pre-GR entry:', error);
+                console.error('Error details:', {
+                    message: error.message,
+                    code: error.code,
+                    details: error.details,
+                    hint: error.hint
+                });
                 throw error;
             }
 
@@ -435,21 +460,68 @@ export default function CreatePreGRPage() {
             router.push('/pre-gr-list');
 
         } catch (error) {
-            console.error('Error creating Pre-GR entry:', error);
-            toast.error('Failed to create Pre-GR entry: ' + error.message);
+            console.error('CATCH BLOCK: Error creating Pre-GR entry:', error);
+            console.error('CATCH BLOCK: Error type:', typeof error);
+            console.error('CATCH BLOCK: Error message:', error.message);
+            console.error('CATCH BLOCK: Error stack:', error.stack);
+            console.error('CATCH BLOCK: Full error object:', error);
+            toast.error('Failed to create Pre-GR entry: ' + (error.message || 'Unknown error'));
         } finally {
+            console.log('FINALLY BLOCK: Setting loading to false');
             setLoading(false);
         }
     };
 
-    if (loading) return <div className="text-center p-4 text-gray-700">Loading Pre-GR form...</div>;
+    if (loading) {
+        console.log('DEBUG: Form is loading...');
+        return <div className="text-center p-4 text-gray-700">Loading Pre-GR form...</div>;
+    }
+
+    console.log('DEBUG: Form should be rendering now...');
+    console.log('DEBUG: Purchase Orders:', purchaseOrders.length);
+    console.log('DEBUG: Selected PO:', selectedPo);
 
     return (
         <div className="container mx-auto p-4 flex-grow bg-gray-50 dark:bg-gray-900 min-h-screen">
             <h2 className="text-3xl font-semibold text-green-800 dark:text-white-800 mb-6 text-center">Create New Pre-GR Entry</h2>
 
             <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mb-8">
-                {/* PO Selection and Details */}
+                {/* PO Selection */}
+                <div className="mb-6">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Select Purchase Order</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label htmlFor="poSelection" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Purchase Order</label>
+                            <select
+                                id="poSelection"
+                                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 dark:text-gray-200"
+                                value={selectedPoId || ''}
+                                onChange={(e) => {
+                                    const poId = parseInt(e.target.value);
+                                    setSelectedPoId(poId);
+                                    console.log('MANUAL PO SELECTION:', poId);
+                                }}
+                            >
+                                <option value="">-- Select Purchase Order --</option>
+                                {purchaseOrders.map((po) => (
+                                    <option key={po.id} value={po.id}>
+                                        {po.vouchernumber} - {po.suppliers?.name || 'Unknown Supplier'}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                                {purchaseOrders.length > 0 ? 
+                                    `Found ${purchaseOrders.length} purchase orders` : 
+                                    'No purchase orders available'
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* PO Details */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
 
                     <div>

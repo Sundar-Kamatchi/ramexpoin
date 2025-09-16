@@ -442,7 +442,7 @@ export default function PreGRPage() {
                     
                     <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-md mb-6">
                         <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">Weight Details</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                                 <label htmlFor="ladenWtKgs" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Laden Wt. (Kgs)</label>
                                 <input type="number" id="ladenWtKgs" placeholder="Kgs" className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm bg-white dark:bg-gray-700 text-right pr-2" value={ladenWtKgs} onChange={(e) => setLadenWtKgs(e.target.value)} disabled={isApprovalSectionDisabledForNonAdmin}/>
@@ -450,6 +450,10 @@ export default function PreGRPage() {
                             <div>
                                 <label htmlFor="emptyWtKgs" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Empty Wt. (Kgs)</label>
                                 <input type="number" id="emptyWtKgs" placeholder="Kgs" className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm bg-white dark:bg-gray-700 text-right pr-2" value={emptyWtKgs} onChange={(e) => setEmptyWtKgs(e.target.value)} disabled={isApprovalSectionDisabledForNonAdmin}/>
+                            </div>
+                            <div>
+                                <label htmlFor="netWtKgs" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Net Wt. (Kgs)</label>
+                                <input type="number" id="netWtKgs" placeholder="Kgs" className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm bg-gray-100 dark:bg-gray-600 cursor-not-allowed text-right pr-2" value={((parseFloat(ladenWtKgs) || 0) - (parseFloat(emptyWtKgs) || 0)).toString()} readOnly/>
                             </div>
                         </div>
                     </div>

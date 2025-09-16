@@ -70,7 +70,7 @@ export default function Home() {
                     </div>
                 </Link> */}
 
-                {/* Card 5: Masters - Indigo Theme */}
+                {/* Card 4: Masters - Indigo Theme */}
                 <Link href="/masters" passHref>
                     <div className="bg-indigo-50/80 dark:bg-indigo-900/60 text-indigo-900 dark:text-indigo-100 border border-indigo-200/60 dark:border-indigo-700/50 rounded-3xl shadow-lg hover:shadow-2xl shadow-indigo-900/10 dark:shadow-indigo-900/30 transition-all duration-300 ease-in-out cursor-pointer flex flex-col items-center justify-center text-center p-7 min-h-[190px] transform hover:-translate-y-1.5 hover:bg-indigo-100/70 dark:hover:bg-indigo-900/70 backdrop-blur">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 text-indigo-600 dark:text-indigo-400 mb-4">
