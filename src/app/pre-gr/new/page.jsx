@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { formatDateDDMMYYYY } from '@/utils/dateUtils';
+import { useAuth } from '@/hooks/use-auth';
 // Temporarily removed database utilities import for debugging
 // import { 
 //   fetchMasterData, 
@@ -14,6 +15,7 @@ import { formatDateDDMMYYYY } from '@/utils/dateUtils';
 
 export default function CreatePreGRPage() {
     const router = useRouter();
+    const { user, userProfile } = useAuth();
     const [loading, setLoading] = useState(true);
 
     // Data for dropdowns
@@ -276,6 +278,8 @@ export default function CreatePreGRPage() {
                     setPoRate(firstPo.rate?.toString() || '');
                     setPoDamageAllowed(firstPo.damage_allowed_kgs_ton?.toString() || '');
                     setPoCargo(firstPo.cargo?.toString() || '');
+                    // Auto-fill prepared by with current user (if available)
+                    setPreparedBy(userProfile?.full_name || '');
                     console.log('PO AUTO-SELECTION COMPLETE');
                 } else {
                     console.error('NO PURCHASE ORDERS FOUND! This will cause the form to fail.');
@@ -905,6 +909,7 @@ export default function CreatePreGRPage() {
                                 className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm bg-white dark:bg-gray-700 dark:text-gray-200"
                                 value={preparedBy}
                                 onChange={(e) => setPreparedBy(e.target.value)}
+                                placeholder="Enter your name"
                             />
                         </div>
                     </div>

@@ -9,31 +9,36 @@ export function useAuth() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userProfile, setUserProfile] = useState(null);
   const router = useRouter();
 
   const checkAdminStatus = async (user) => {
     if (!user) {
       setIsAdmin(false);
+      setUserProfile(null);
       return;
     }
 
     try {
       const { data: profile, error } = await supabase
         .from('user_profiles')
-        .select('role')
+        .select('role, full_name, email')
         .eq('id', user.id)
         .single();
 
       if (error) {
         console.warn('useAuth: Could not fetch user profile:', error.message);
         setIsAdmin(false);
+        setUserProfile(null);
       } else {
-        console.log('useAuth: User profile found, role:', profile?.role);
+        console.log('useAuth: User profile found, role:', profile?.role, 'full_name:', profile?.full_name);
         setIsAdmin(profile?.role === 'admin');
+        setUserProfile(profile);
       }
     } catch (profileError) {
       console.warn('useAuth: Profile check failed:', profileError);
       setIsAdmin(false);
+      setUserProfile(null);
     }
   };
 
@@ -67,6 +72,7 @@ export function useAuth() {
           await checkAdminStatus(session.user);
         } else {
           setIsAdmin(false);
+          setUserProfile(null);
         }
         
         if (event === 'SIGNED_IN') {
@@ -90,6 +96,7 @@ export function useAuth() {
     loading,
     signOut,
     user: session?.user || null,
+    userProfile,
     isAdmin
   };
 }

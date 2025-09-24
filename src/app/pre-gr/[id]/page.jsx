@@ -24,7 +24,7 @@ export default function PreGRPage() {
     const router = useRouter();
     const params = useParams();
     const id = params.id;
-    const { isAdmin } = useAuth();
+    const { isAdmin, user, userProfile } = useAuth();
     const [loading, setLoading] = useState(true);
 
     // Data for dropdowns
@@ -160,7 +160,7 @@ export default function PreGRPage() {
                         setGapItem2Id(entryData.gap_item2_id);
                         setGapItem2Bags(entryData.gap_item2_qty?.toString() || '');
                         setSieveNo(entryData.sieve_no || '');
-                        setPreparedBy(entryData.prepared_by || '');
+                        setPreparedBy(entryData.prepared_by || userProfile?.full_name || '');
                         setWeightShortage(entryData.weight_shortage?.toString() || '');
                         setRemarks(entryData.remarks || '');
                         setIsAdminApproved(entryData.is_admin_approved || false);
@@ -189,6 +189,8 @@ export default function PreGRPage() {
                         setPoDamageAllowed(damageValue ? damageValue.toString() : '');
                         setPoCargo(cargoValue ? cargoValue.toString() : '');
                     }
+                    // Auto-fill prepared by with current user (if available)
+                    setPreparedBy(userProfile?.full_name || '');
                 }
             } catch (err) {
                 console.error('Pre-GR Page: Error in fetchData:', err);
@@ -231,13 +233,7 @@ export default function PreGRPage() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         
-        // Check if admin approval is required (when podi_bags > 0)
-        const podiBagsValue = parseFloat(podiBags) || 0;
-        if (podiBagsValue > 0 && !isAdminApproved && !isAdmin) {
-            toast.error('Admin approval is required when PODI bags > 0.');
-            return;
-        }
-        
+        // Only restrict editing if the entry is already admin approved
         if (isAdminApproved && !isAdmin) {
             toast.error('This entry is approved and cannot be altered.');
             return;
@@ -516,10 +512,10 @@ export default function PreGRPage() {
                             <h3 className="text-lg font-semibold text-green-800 dark:text-green-200 mb-4">
                                 {preGREntryId ? 'Admin Approval' : 'Admin Approval Required'}
                             </h3>
-                            {!preGREntryId && parseFloat(podiBags) > 0 && (
+                            {!isAdminApproved && parseFloat(podiBags) > 0 && (
                                 <div className="mb-4 p-3 bg-yellow-100 dark:bg-yellow-900 border border-yellow-300 dark:border-yellow-700 rounded-md">
                                     <p className="text-yellow-800 dark:text-yellow-200 text-sm">
-                                        <strong>Note:</strong> Admin approval is required because PODI bags &gt; 0.
+                                        <strong>Note:</strong> Admin approval will be required when PODI bags &gt; 0.
                                     </p>
                                 </div>
                             )}
