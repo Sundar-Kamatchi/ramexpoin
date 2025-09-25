@@ -512,13 +512,6 @@ export default function PreGRPage() {
                             <h3 className="text-lg font-semibold text-green-800 dark:text-green-200 mb-4">
                                 {preGREntryId ? 'Admin Approval' : 'Admin Approval Required'}
                             </h3>
-                            {!isAdminApproved && parseFloat(podiBags) > 0 && (
-                                <div className="mb-4 p-3 bg-yellow-100 dark:bg-yellow-900 border border-yellow-300 dark:border-yellow-700 rounded-md">
-                                    <p className="text-yellow-800 dark:text-yellow-200 text-sm">
-                                        <strong>Note:</strong> Admin approval will be required when PODI bags &gt; 0.
-                                    </p>
-                                </div>
-                            )}
                             <div className="flex items-center mb-6">
                                 <input type="checkbox" id="adminApproval" className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded" checked={isAdminApproved} onChange={(e) => setIsAdminApproved(e.target.checked)} />
                                 <label htmlFor="adminApproval" className="ml-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Admin Approved</label>
