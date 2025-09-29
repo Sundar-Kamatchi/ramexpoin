@@ -1,14 +1,12 @@
--- Check the actual columns in gqr_entry table
-SELECT column_name, data_type, is_nullable
+-- Check if the required columns exist in gqr_entry table
+SELECT column_name, data_type, is_nullable, column_default
 FROM information_schema.columns 
 WHERE table_name = 'gqr_entry' 
-AND table_schema = 'public'
-ORDER BY ordinal_position;
-
--- Check if there's a gqr_no column instead
-SELECT column_name, data_type, is_nullable
-FROM information_schema.columns 
-WHERE table_name = 'gqr_entry' 
-AND table_schema = 'public'
-AND column_name LIKE '%gr%'
-ORDER BY ordinal_position;
+AND column_name IN (
+  'weight_shortage_weight',
+  'user_remark', 
+  'weight_shortage_request_status',
+  'requested_weight_shortage',
+  'admin_remark'
+)
+ORDER BY column_name;

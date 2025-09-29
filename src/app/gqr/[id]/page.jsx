@@ -28,6 +28,13 @@ export default function GQREditPage() {
   const [finalBagCounts, setFinalBagCounts] = useState({
     podi_bags: '', gap_item1_bags: '', gap_item2_bags: '',
   });
+  
+  // Weight shortage request fields
+  const [weightShortageRequest, setWeightShortageRequest] = useState({
+    requestedValue: '',
+    userRemark: '',
+    requestStatus: 'none'
+  });
   // Submission status
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState(null);
@@ -48,6 +55,22 @@ export default function GQREditPage() {
         // Always use the production-safe utility function to avoid relationship issues
         console.log('GQR Detail: Using production-safe utility function...');
         const directData = await fetchGQRWithRelationships(gqrId);
+        
+        // Also fetch user_remark directly to ensure it's available
+        const { data: userRemarkData, error: userRemarkError } = await supabase
+          .from('gqr_entry')
+          .select('user_remark')
+          .eq('id', gqrId)
+          .single();
+        
+        if (userRemarkError) {
+          console.warn('Failed to fetch user_remark directly:', userRemarkError);
+        } else {
+          // Override the user_remark in directData if it's missing
+          if (userRemarkData?.user_remark) {
+            directData.user_remark = userRemarkData.user_remark;
+          }
+        }
           
           // Transform the direct query result to match expected structure
           const fetchedData = {
@@ -80,10 +103,15 @@ export default function GQREditPage() {
             // Pre-GR Details
             pre_gr_gr_no: directData.pre_gr_entry?.gr_no || '',
             gr_no: directData.pre_gr_entry?.gr_no || '',
-            gr_dt: directData.pre_gr_entry?.gr_dt || ''
+            gr_dt: directData.pre_gr_entry?.gr_dt || '',
+            
+            // User Remark Field
+            user_remark: directData.user_remark || ''
           };
           
           setGqrData(fetchedData);
+          
+          
           setWeights(prev => ({
             ...prev,
             exportQuality: { kgs: fetchedData.export_quality_weight || '' },
@@ -100,15 +128,34 @@ export default function GQREditPage() {
             gap_item2_bags: '',
           });
           
+          // Set user remark data
+          const requestData = {
+            userRemark: fetchedData.user_remark || ''
+          };
+          
+          setWeightShortageRequest(requestData);
+          
+          
       } catch (err) {
-        setError(`Failed to fetch data: ${err.message}`);
-        console.error(err);
+        console.error('Fetch error:', err);
+        
+        // Handle authentication errors
+        if (err.message?.includes('Invalid Refresh Token') || err.message?.includes('Refresh Token Not Found')) {
+          setError('Your session has expired. Please refresh the page or log in again.');
+          // Optionally redirect to login
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 3000);
+        } else {
+          setError(`Failed to fetch data: ${err.message}`);
+        }
       } finally {
         setLoading(false);
       }
     };
     fetchData();
   }, [gqrId]);
+
 
   // --- Memoized Calculations ---
   const calculatedValues = useMemo(() => {
@@ -182,36 +229,179 @@ export default function GQREditPage() {
     }
   };
 
+  const handleWeightShortageRequestChange = (field, value) => {
+    setWeightShortageRequest(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Manual reset function in case form gets stuck
+  const handleManualReset = () => {
+    console.log('Manual reset triggered');
+    setFormSubmitting(false);
+    setError(null);
+    setSuccessMessage(null);
+  };
+
+
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setFormSubmitting(true);
     setError(null);
     setSuccessMessage(null);
+    
+    // Add timeout to prevent stuck "saving..." state
+    const timeoutId = setTimeout(() => {
+      console.error('Form submission timeout - forcing completion');
+      setFormSubmitting(false);
+      setError('Form submission timed out. Please try again.');
+    }, 30000); // 30 second timeout
+    
     try {
-      const { error } = await supabase.rpc('update_gqr_and_pre_gr', {
-        p_gqr_id: gqrData.gqr_id,
-        p_pre_gr_id: gqrData.pre_gr_id,
-        p_export_quality_weight: parseFloat(weights.exportQuality.kgs) || 0,
-        p_rot_weight: parseFloat(weights.rot.kgs) || 0,
-        p_doubles_weight: parseFloat(weights.doubles.kgs) || 0,
-        p_sand_weight: parseFloat(weights.sand.kgs) || 0,
-        p_gap_items_weight: parseFloat(weights.gapItems.kgs) || 0,
-        p_podi_weight: parseFloat(weights.podi.kgs) || 0,
-        p_total_wastage_weight: calculatedValues.totalWastage,
-        p_total_value_received: calculatedValues.totalValueReceived,
-        p_final_podi_bags: parseInt(finalBagCounts.podi_bags) || 0,
-        p_final_gap_item1_bags: parseInt(finalBagCounts.gap_item1_bags) || 0,
-        p_final_gap_item2_bags: parseInt(finalBagCounts.gap_item2_bags) || 0,
-      });
-      if (error) throw error;
+      console.log('Starting form submission...');
+      // Try RPC function first, fallback to direct updates if it fails
+      try {
+        const rpcParams = {
+          p_gqr_id: gqrData.gqr_id,
+          p_pre_gr_id: gqrData.pre_gr_id,
+          p_export_quality_weight: parseFloat(weights.exportQuality.kgs) || 0,
+          p_rot_weight: parseFloat(weights.rot.kgs) || 0,
+          p_doubles_weight: parseFloat(weights.doubles.kgs) || 0,
+          p_sand_weight: parseFloat(weights.sand.kgs) || 0,
+          p_gap_items_weight: parseFloat(weights.gapItems.kgs) || 0,
+          p_podi_weight: parseFloat(weights.podi.kgs) || 0,
+          p_total_wastage_weight: calculatedValues.totalWastage,
+          p_total_value_received: calculatedValues.totalValueReceived,
+          p_final_podi_bags: parseInt(finalBagCounts.podi_bags) || 0,
+          p_final_gap_item1_bags: parseInt(finalBagCounts.gap_item1_bags) || 0,
+          p_final_gap_item2_bags: parseInt(finalBagCounts.gap_item2_bags) || 0,
+          p_user_remark: weightShortageRequest.userRemark || ''
+        };
+        
+        console.log('RPC - user remark:', weightShortageRequest.userRemark);
+        console.log('RPC - user remark length:', weightShortageRequest.userRemark?.length);
+        
+
+        // Always preserve the existing weight shortage value from database
+        const existingWeightShortage = gqrData.weight_shortage_weight || 0;
+        
+        if (isAdmin) {
+          // Admin can update weight shortage if they entered a new value
+          const newWeightShortageValue = parseFloat(weights.weightShortage.kgs);
+          const weightShortageValue = !isNaN(newWeightShortageValue) ? newWeightShortageValue : existingWeightShortage;
+          console.log('RPC: Admin updating weight shortage to:', weightShortageValue);
+          rpcParams.p_weight_shortage_weight = weightShortageValue;
+        } else {
+          // For non-admin users, always preserve the existing value
+          console.log('RPC: Preserving existing weight shortage:', existingWeightShortage);
+          rpcParams.p_weight_shortage_weight = existingWeightShortage;
+        }
+
+        console.log('Calling RPC function with params:', rpcParams);
+        const { error: rpcError } = await supabase.rpc('update_gqr_and_pre_gr', rpcParams);
+        if (rpcError) {
+          console.error('RPC Error:', rpcError);
+          throw rpcError;
+        }
+        console.log('RPC function completed successfully');
+      } catch (rpcError) {
+        console.log('RPC function failed, trying direct database updates:', rpcError.message);
+        
+        // Fallback: Direct database updates
+        console.log('Direct update - user remark:', weightShortageRequest.userRemark);
+        console.log('Direct update - user remark length:', weightShortageRequest.userRemark?.length);
+        const updateData = {
+          export_quality_weight: parseFloat(weights.exportQuality.kgs) || 0,
+          rot_weight: parseFloat(weights.rot.kgs) || 0,
+          doubles_weight: parseFloat(weights.doubles.kgs) || 0,
+          sand_weight: parseFloat(weights.sand.kgs) || 0,
+          gap_items_weight: parseFloat(weights.gapItems.kgs) || 0,
+          podi_weight: parseFloat(weights.podi.kgs) || 0,
+          total_value_received: calculatedValues.totalValueReceived,
+          user_remark: weightShortageRequest.userRemark || '',
+          updated_at: new Date().toISOString()
+        };
+        console.log('Direct update data:', updateData);
+
+        // Always preserve the existing weight shortage value from database
+        const existingWeightShortage = gqrData.weight_shortage_weight || 0;
+        
+        if (isAdmin) {
+          // Admin can update weight shortage if they entered a new value
+          const newWeightShortageValue = parseFloat(weights.weightShortage.kgs);
+          const weightShortageValue = !isNaN(newWeightShortageValue) ? newWeightShortageValue : existingWeightShortage;
+          console.log('Admin updating weight shortage to:', weightShortageValue);
+          updateData.weight_shortage_weight = weightShortageValue;
+        } else {
+          // For non-admin users, always preserve the existing value
+          console.log('Preserving existing weight shortage:', existingWeightShortage);
+          updateData.weight_shortage_weight = existingWeightShortage;
+        }
+
+        console.log('Updating GQR entry with data:', updateData);
+        const { error: gqrError } = await supabase
+          .from('gqr_entry')
+          .update(updateData)
+          .eq('id', gqrData.gqr_id);
+
+        if (gqrError) {
+          console.error('GQR update error:', gqrError);
+          throw gqrError;
+        }
+        console.log('GQR entry updated successfully');
+        
+
+        // Update Pre-GR bag counts if needed
+        if (gqrData.pre_gr_id) {
+          console.log('Updating Pre-GR entry with bag counts:', {
+            podi_bags: parseInt(finalBagCounts.podi_bags) || 0,
+            gap_item1_bags: parseInt(finalBagCounts.gap_item1_bags) || 0,
+            gap_item2_bags: parseInt(finalBagCounts.gap_item2_bags) || 0
+          });
+          
+          const { error: preGrError } = await supabase
+            .from('pre_gr_entry')
+            .update({
+              podi_bags: parseInt(finalBagCounts.podi_bags) || 0,
+              gap_item1_bags: parseInt(finalBagCounts.gap_item1_bags) || 0,
+              gap_item2_bags: parseInt(finalBagCounts.gap_item2_bags) || 0,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', gqrData.pre_gr_id);
+
+          if (preGrError) {
+            console.warn('Pre-GR update failed:', preGrError);
+            // Don't throw error here as the main GQR update succeeded
+          } else {
+            console.log('Pre-GR entry updated successfully');
+          }
+        }
+      }
+      
       setSuccessMessage('GQR updated successfully!');
       setTimeout(() => {
         router.push('/gqr-list');
       }, 2000);
  
     } catch (err) {
-      setError(`Update failed: ${err.message}`);
+      console.error('Update error:', err);
+      console.error('Error details:', {
+        message: err.message,
+        stack: err.stack,
+        name: err.name
+      });
+      
+      // Handle authentication errors
+      if (err.message?.includes('Invalid Refresh Token') || err.message?.includes('Refresh Token Not Found')) {
+        setError('Your session has expired. Please refresh the page or log in again.');
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 3000);
+      } else {
+        setError(`Update failed: ${err.message}`);
+      }
     } finally {
+      clearTimeout(timeoutId);
+      console.log('Form submission completed, setting formSubmitting to false');
       setFormSubmitting(false);
     }
   };
@@ -297,6 +487,15 @@ export default function GQREditPage() {
                   🔄 Reverse Status (Admin Only)
                 </button>
               )}
+            </div>
+          )}
+          
+          {/* Admin notification for pending weight shortage requests */}
+          {isAdmin && weightShortageRequest.requestStatus === 'pending' && (
+            <div className="mt-2">
+              <div className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium inline-block">
+                ⚠️ Pending Weight Shortage Request - Review Required
+              </div>
             </div>
           )}
         </div>
@@ -409,19 +608,65 @@ export default function GQREditPage() {
             </div>
             <div>
               <label className="text-sm font-medium">Weight Shortage (kg)</label>
-              <input 
-                type="text"
-                inputMode="decimal"
-                pattern="[0-9]*\.?[0-9]*"
-                name="weightShortage" 
-                value={weights.weightShortage.kgs} 
-                onChange={(e) => handleWeightChange('weightShortage', 'kgs', e.target.value)} 
-                className="w-full mt-1 p-2 border rounded"
-                placeholder="Enter weight shortage"
-                disabled={gqrData.gqr_status === 'Closed'}
-              />
+              {isAdmin ? (
+                // Admin can directly edit weight shortage
+                <input 
+                  type="text"
+                  inputMode="decimal"
+                  pattern="[0-9]*\.?[0-9]*"
+                  name="weightShortage" 
+                  value={weights.weightShortage.kgs} 
+                  onChange={(e) => handleWeightChange('weightShortage', 'kgs', e.target.value)} 
+                  className="w-full mt-1 p-2 border rounded"
+                  placeholder="Enter weight shortage"
+                  disabled={gqrData.gqr_status === 'Closed'}
+                />
+              ) : (
+                // Regular users see read-only current value
+                <input 
+                  type="text"
+                  value={weights.weightShortage.kgs || gqrData.weight_shortage || '0'} 
+                  className="w-full mt-1 p-2 border rounded bg-gray-100 cursor-not-allowed text-gray-900 font-medium"
+                  placeholder="Weight shortage (read-only)"
+                  readOnly
+                  style={{
+                    color: '#111827',
+                    backgroundColor: '#f3f4f6',
+                    fontSize: '16px',
+                    fontWeight: '500'
+                  }}
+                />
+              )}
             </div>
           </div>
+          
+          {/* Weight Shortage Remark Section - Visible for All Users */}
+          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <h3 className="text-lg font-semibold text-blue-800 mb-3">📝 Weight Shortage Remark</h3>
+            
+            
+            
+              <div className="mb-4">
+                <label className="text-sm font-medium text-gray-700">Remark</label>
+                <input 
+                  type="text"
+                  value={weightShortageRequest.userRemark || ''} 
+                  onChange={(e) => handleWeightShortageRequestChange('userRemark', e.target.value)} 
+                  className="w-full mt-1 p-3 border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white text-gray-900 font-medium"
+                  placeholder={!isAdmin && (!weightShortageRequest.userRemark || weightShortageRequest.userRemark.trim() === '') ? "Enter weight shortage details (e.g., '50kg shortage due to moisture loss')" : ""}
+                  disabled={gqrData.gqr_status === 'Closed'}
+                  style={{ 
+                    color: '#111827',
+                    backgroundColor: '#ffffff',
+                    fontSize: '16px',
+                    fontWeight: '500',
+                    border: '1px solid #d1d5db'
+                  }}
+                />
+              </div>
+          </div>
+          
+          
           
           {/* Third Row: Damage Allowed, Actual Wastage, Total Wastage, Export Quality */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

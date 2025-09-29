@@ -1,0 +1,75 @@
+-- Drop the unused weight_shortage column and update function to use weight_shortage_weight
+
+-- Step 1: Drop the unused columns
+ALTER TABLE gqr_entry DROP COLUMN IF EXISTS weight_shortage;
+ALTER TABLE gqr_entry DROP COLUMN IF EXISTS weight_shortage_request_status;
+ALTER TABLE gqr_entry DROP COLUMN IF EXISTS requested_weight_shortage;
+ALTER TABLE gqr_entry DROP COLUMN IF EXISTS admin_remark;
+
+-- Step 2: Drop the existing function
+DROP FUNCTION IF EXISTS update_gqr_and_pre_gr(INTEGER, INTEGER, NUMERIC, NUMERIC, NUMERIC, NUMERIC, NUMERIC, NUMERIC, NUMERIC, NUMERIC, NUMERIC, INTEGER, INTEGER, INTEGER, TEXT);
+
+-- Step 3: Create the new function using weight_shortage_weight
+CREATE OR REPLACE FUNCTION update_gqr_and_pre_gr(
+  p_gqr_id INTEGER,
+  p_pre_gr_id INTEGER,
+  p_export_quality_weight NUMERIC DEFAULT 0,
+  p_rot_weight NUMERIC DEFAULT 0,
+  p_doubles_weight NUMERIC DEFAULT 0,
+  p_sand_weight NUMERIC DEFAULT 0,
+  p_weight_shortage_weight NUMERIC DEFAULT 0,  -- Use weight_shortage_weight
+  p_gap_items_weight NUMERIC DEFAULT 0,
+  p_podi_weight NUMERIC DEFAULT 0,
+  p_total_wastage_weight NUMERIC DEFAULT 0,
+  p_total_value_received NUMERIC DEFAULT 0,
+  p_final_podi_bags INTEGER DEFAULT 0,
+  p_final_gap_item1_bags INTEGER DEFAULT 0,
+  p_final_gap_item2_bags INTEGER DEFAULT 0,
+  p_user_remark TEXT DEFAULT ''
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  -- Update the GQR entry
+  UPDATE gqr_entry 
+  SET 
+    export_quality_weight = p_export_quality_weight,
+    rot_weight = p_rot_weight,
+    doubles_weight = p_doubles_weight,
+    sand_weight = p_sand_weight,
+    weight_shortage_weight = p_weight_shortage_weight,  -- Use weight_shortage_weight
+    gap_items_weight = p_gap_items_weight,
+    podi_weight = p_podi_weight,
+    total_wastage_weight = p_total_wastage_weight,
+    total_value_received = p_total_value_received,
+    user_remark = p_user_remark,
+    updated_at = NOW()
+  WHERE id = p_gqr_id;
+  
+  -- Update the Pre-GR entry bag counts
+  UPDATE pre_gr_entry 
+  SET 
+    podi_bags = p_final_podi_bags,
+    gap_item1_bags = p_final_gap_item1_bags,
+    gap_item2_bags = p_final_gap_item2_bags,
+    updated_at = NOW()
+  WHERE id = p_pre_gr_id;
+  
+  -- Check if the update was successful
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'GQR entry with id % not found', p_gqr_id;
+  END IF;
+END;
+$$;
+
+-- Step 4: Grant execute permission
+GRANT EXECUTE ON FUNCTION update_gqr_and_pre_gr(INTEGER, INTEGER, NUMERIC, NUMERIC, NUMERIC, NUMERIC, NUMERIC, NUMERIC, NUMERIC, NUMERIC, NUMERIC, INTEGER, INTEGER, INTEGER, TEXT) TO authenticated;
+
+-- Step 5: Verify the columns were dropped and weight_shortage_weight exists
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'gqr_entry' 
+AND column_name IN ('weight_shortage', 'weight_shortage_weight', 'weight_shortage_request_status', 'requested_weight_shortage', 'admin_remark', 'user_remark')
+ORDER BY column_name;
