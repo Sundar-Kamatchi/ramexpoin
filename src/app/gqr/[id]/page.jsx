@@ -85,7 +85,7 @@ export default function GQREditPage() {
             gap_items_weight: directData.gap_items_weight || 0,
             gqr_status: directData.gqr_status || 'Open',
 
-            weight_shortage: directData.weight_shortage_weight || 0,
+            weight_shortage: directData.weight_shortage_weight,
             po_rate: directData.pre_gr_entry?.purchase_orders?.rate || 0,
             podi_rate: directData.pre_gr_entry?.purchase_orders?.podi_rate || 0,
             net_wt: (directData.pre_gr_entry?.ladden_wt || 0) - (directData.pre_gr_entry?.empty_wt || 0),
@@ -118,7 +118,7 @@ export default function GQREditPage() {
             rot: { kgs: fetchedData.rot_weight || '' },
             doubles: { kgs: fetchedData.doubles_weight || '' },
             sand: { kgs: fetchedData.sand_weight || '' },
-            weightShortage: { kgs: fetchedData.weight_shortage || '' },
+            weightShortage: { kgs: fetchedData.weight_shortage !== null && fetchedData.weight_shortage !== undefined ? fetchedData.weight_shortage : '' },
             gapItems: { kgs: fetchedData.gap_items_weight || '' },
             podi: { kgs: fetchedData.podi_weight || '' },
           }));
@@ -282,7 +282,7 @@ export default function GQREditPage() {
         
 
         // Always preserve the existing weight shortage value from database
-        const existingWeightShortage = gqrData.weight_shortage_weight || 0;
+        const existingWeightShortage = gqrData.weight_shortage || 0;
         
         if (isAdmin) {
           // Admin can update weight shortage if they entered a new value
@@ -323,7 +323,7 @@ export default function GQREditPage() {
         console.log('Direct update data:', updateData);
 
         // Always preserve the existing weight shortage value from database
-        const existingWeightShortage = gqrData.weight_shortage_weight || 0;
+        const existingWeightShortage = gqrData.weight_shortage || 0;
         
         if (isAdmin) {
           // Admin can update weight shortage if they entered a new value
@@ -625,7 +625,7 @@ export default function GQREditPage() {
                 // Regular users see read-only current value
                 <input 
                   type="text"
-                  value={weights.weightShortage.kgs || gqrData.weight_shortage || '0'} 
+                  value={weights.weightShortage.kgs || '0'} 
                   className="w-full mt-1 p-2 border rounded bg-gray-100 cursor-not-allowed text-gray-900 font-medium"
                   placeholder="Weight shortage (read-only)"
                   readOnly
