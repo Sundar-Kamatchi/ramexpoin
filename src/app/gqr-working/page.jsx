@@ -610,7 +610,7 @@ export default function GQRWorkingPage() {
             <option value="">Select a GQR...</option>
             {gqrList.map((gqr) => (
               <option key={gqr.id} value={gqr.id}>
-                GQR #{gqr.id} - {gqr.pre_gr_entry?.gr_no || 'N/A'} - {gqr.pre_gr_entry?.gr_dt ? new Date(gqr.pre_gr_entry.gr_dt).toLocaleDateString() : 'N/A'} - {gqr.pre_gr_entry?.suppliers?.name || 'N/A'}
+                GQR #{gqr.id} - {gqr.pre_gr_entry?.gr_no || 'N/A'} - {gqr.pre_gr_entry?.gr_dt ? formatDateDDMMYYYY(gqr.pre_gr_entry.gr_dt) : 'N/A'} - {gqr.pre_gr_entry?.suppliers?.name || 'N/A'}
               </option>
             ))}
           </select>
