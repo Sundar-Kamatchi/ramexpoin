@@ -27,7 +27,7 @@ export default function PreGRListPage() {
             try {
                 console.log('Pre-GR List: Starting to fetch entries...');
                 
-                // First, fetch the pre_gr_entry records
+                // First, fetch the pre_gr_entry records with purchase order data
                 const { data: preGRData, error: preGRError } = await supabase
                     .from('pre_gr_entry')
                     .select(`
@@ -36,14 +36,17 @@ export default function PreGRListPage() {
                         date,
                         supplier_id,
                         item_id,
-                        ladden_wt,
-                        empty_wt,
                         net_wt,
                         vehicle_no,
                         bags,
                         is_admin_approved,
                         gr_no,
-                        gr_dt
+                        gr_dt,
+                        admin_approved_advance,
+                        po_id,
+                        purchase_orders!inner(
+                            rate
+                        )
                     `)
                     .order('created_at', { ascending: false });
 
@@ -92,11 +95,6 @@ export default function PreGRListPage() {
 
                 // Combine data
                 const formattedData = preGRData.map((entry) => {
-                    // Calculate net weight as laden weight - empty weight
-                    const ladenWt = parseFloat(entry.ladden_wt) || 0;
-                    const emptyWt = parseFloat(entry.empty_wt) || 0;
-                    const netWt = ladenWt - emptyWt;
-                    
                     return {
                         id: entry.id,
                         gr_no: entry.gr_no,
@@ -105,14 +103,14 @@ export default function PreGRListPage() {
                         date: entry.date,
                         supplier_id: entry.supplier_id,
                         item_id: entry.item_id,
-                        ladden_wt: entry.ladden_wt,
-                        empty_wt: entry.empty_wt,
-                        net_wt: netWt > 0 ? netWt : null, // Only set net_wt if calculation is positive
+                        net_wt: entry.net_wt,
                         lorry_no: entry.vehicle_no, // Map vehicle_no from DB to lorry_no for display
                         bags: entry.bags,
                         supplier_name: supplierMap.get(entry.supplier_id) || 'Unknown Supplier',
                         item_name: itemMap.get(entry.item_id) || 'Unknown Item',
                         is_admin_approved: entry.is_admin_approved || false, // Include approval status
+                        po_rate: entry.purchase_orders?.rate || 0, // Get PO rate from joined table
+                        admin_approved_advance: entry.admin_approved_advance || 0, // Get admin approved advance
                     };
                 });
 
@@ -186,8 +184,8 @@ export default function PreGRListPage() {
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Supplier</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Item</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Lorry No.</th>
-                                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Laden Wt.</th>
-                                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Empty Wt.</th>
+                                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">PO Rate</th>
+                                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Advance</th>
                                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Net Wt.</th>
                                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Bags</th>
                                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
@@ -202,8 +200,13 @@ export default function PreGRListPage() {
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{entry.supplier_name}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{entry.item_name}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{entry.lorry_no}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300 text-right">{formatWeight(entry.ladden_wt)}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300 text-right">{formatWeight(entry.empty_wt)}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300 text-right">₹{entry.po_rate?.toLocaleString('en-IN') || '0'}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300 text-right">
+                                        {entry.is_admin_approved && entry.admin_approved_advance > 0 ? 
+                                            `₹${entry.admin_approved_advance.toLocaleString('en-IN')}` : 
+                                            'N/A'
+                                        }
+                                    </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300 text-right">{formatWeight(entry.net_wt)}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300 text-right">{entry.bags}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
