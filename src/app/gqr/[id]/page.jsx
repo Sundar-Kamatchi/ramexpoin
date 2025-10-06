@@ -9,6 +9,7 @@ import { formatDateDDMMYYYY } from '@/utils/dateUtils';
 import DeleteButton from '@/components/DeleteButton';
 import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
+import { GQRPrint } from '@/utils/gqr_print';
 
 export default function GQREditPage() {
   const router = useRouter();
@@ -159,7 +160,20 @@ export default function GQREditPage() {
 
   // --- Memoized Calculations ---
   const calculatedValues = useMemo(() => {
-    if (!gqrData || !weights) return { totalValueReceived: 0, totalWastage: 0, actualYield: 0, totalWastagePercentage: 0 };
+    if (!gqrData || !weights) return { 
+      totalValueReceived: 0, 
+      totalWastage: 0, 
+      actualYield: 0, 
+      totalWastagePercentage: 0,
+      totalCargo: 0,
+      podiKgs: 0,
+      gapKgs: 0,
+      wastageKgs: 0,
+      exportQuality: 0,
+      totalCargoAfterPodiAndGapKgs: 0,
+      totalCargoAfterPodiAndGapRate: 0,
+      totalCargoAfterPodiAndGapValue: 0
+    };
     
     const parse = (val) => parseFloat(val) || 0;
     const exportKgs = parse(weights.exportQuality?.kgs);
@@ -178,7 +192,26 @@ export default function GQREditPage() {
     const actualYield = gqrData.net_wt > 0 ? (exportKgs / gqrData.net_wt) * 100 : 0;
     const totalWastagePercentage = gqrData.net_wt > 0 ? (totalWastage / gqrData.net_wt) * 100 : 0;
 
-    return { totalValueReceived, totalWastage, actualYield, totalWastagePercentage };
+    // Additional properties needed for GQRPrint
+    const totalCargo = gqrData.net_wt || 0;
+    const totalCargoAfterPodiAndGapKgs = totalCargo - podiKgs - gapKgs;
+    const totalCargoAfterPodiAndGapValue = (exportKgs * poRate) - (podiKgs * podiRate) - (gapKgs * poRate);
+    const totalCargoAfterPodiAndGapRate = totalCargoAfterPodiAndGapKgs > 0 ? totalCargoAfterPodiAndGapValue / totalCargoAfterPodiAndGapKgs : 0;
+
+    return { 
+      totalValueReceived, 
+      totalWastage, 
+      actualYield, 
+      totalWastagePercentage,
+      totalCargo,
+      podiKgs,
+      gapKgs,
+      wastageKgs: totalWastage,
+      exportQuality: exportKgs,
+      totalCargoAfterPodiAndGapKgs,
+      totalCargoAfterPodiAndGapRate,
+      totalCargoAfterPodiAndGapValue
+    };
   }, [weights, gqrData]);
 
   // Calculate total wastage
@@ -239,6 +272,15 @@ export default function GQREditPage() {
     setFormSubmitting(false);
     setError(null);
     setSuccessMessage(null);
+  };
+
+  // Function to print GQR
+  const handlePrintGQR = () => {
+    if (gqrData?.gqr_status === 'Closed') {
+      window.print();
+    } else {
+      toast.error('GQR must be finalized before printing');
+    }
   };
 
 
@@ -471,6 +513,26 @@ export default function GQREditPage() {
 
   return (
     <div className="container mx-auto p-4 md:p-6 space-y-6 mt-20">
+      {/* Print content - hidden by default, shown only when printing */}
+      <div className="hidden print:block">
+        <GQRPrint
+          gqrData={gqrData}
+          actualCalculations={calculatedValues}
+          actualValues={weights}
+          estimatedCalculations={{
+            totalCargo: 20000, // 20MT = 20000kg
+            podiKgs: 0,
+            gapKgs: 0,
+            wastageKgs: 0,
+            totalCargoAfterPodiRate: gqrData?.po_rate || 0,
+            totalCargoAfterPodiAndGapRate: gqrData?.po_rate || 0
+          }}
+          adjustableDamageAllowed={0}
+        />
+      </div>
+
+      {/* Main content - hidden when printing */}
+      <div className="print:hidden">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">Edit GQR (GR NO: {gqrData?.gqr_no || gqrData?.gr_no || 'N/A'})</h1>
@@ -499,7 +561,18 @@ export default function GQREditPage() {
             </div>
           )}
         </div>
-        <Button onClick={() => router.push('/gqr-list')} variant="secondary">Back to List</Button>
+        <div className="flex gap-3">
+          {gqrData.gqr_status === 'Closed' && (
+            <Button 
+              onClick={handlePrintGQR} 
+              variant="primary"
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              🖨️ Print GQR
+            </Button>
+          )}
+          <Button onClick={() => router.push('/gqr-list')} variant="secondary">Back to List</Button>
+        </div>
       </div>
 
       {successMessage && <div className="bg-green-100 text-green-700 p-4 rounded-md">{successMessage}</div>}
@@ -853,6 +926,7 @@ export default function GQREditPage() {
            </div>
          </div>
        )}
+      </div> {/* End of print:hidden div */}
     </div>
   );
 }

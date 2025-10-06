@@ -123,7 +123,7 @@ export const fetchGQRListWithRelationships = async () => {
     // Step 1: Fetch all GQR entries
     const { data: gqrData, error: gqrError } = await supabase
       .from('gqr_entry')
-      .select('id, created_at, total_value_received, pre_gr_id')
+      .select('id, created_at, total_value_received, pre_gr_id, gqr_status')
       .order('created_at', { ascending: false });
 
     if (gqrError) {

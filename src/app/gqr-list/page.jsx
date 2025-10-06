@@ -98,13 +98,14 @@ export default function GQRListPage() {
                <th className="px-6 py-3 text-left text-xs font-medium uppercase">PO DATE</th>
                <th className="px-6 py-3 text-left text-xs font-medium uppercase">Supplier</th>
                <th className="px-6 py-3 text-right text-xs font-medium uppercase">Final Value</th>
+               <th className="px-6 py-3 text-center text-xs font-medium uppercase">Status</th>
                <th className="px-6 py-3 text-right text-xs font-medium uppercase">Actions</th>
              </tr>
           </thead>
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200">
             {gqrEntries.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-6 py-8 text-center text-gray-400">
+                <td colSpan={8} className="px-6 py-8 text-center text-gray-400">
                   No GQRs found.
                 </td>
               </tr>
@@ -118,6 +119,15 @@ export default function GQRListPage() {
                    <td className="px-6 py-4">{gqr.pre_gr_entry?.purchase_orders?.suppliers?.name || 'N/A'}</td>
                    <td className="px-6 py-4 text-right font-semibold">
                      ₹{gqr.total_value_received?.toLocaleString('en-IN') || '0.00'}
+                   </td>
+                   <td className="px-6 py-4 text-center">
+                     <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                       gqr.gqr_status === 'Closed' || gqr.gqr_status === 'Finalized' 
+                         ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                         : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                     }`}>
+                       {gqr.gqr_status === 'Closed' || gqr.gqr_status === 'Finalized' ? 'Finalized' : 'Open'}
+                     </span>
                    </td>
                    <td className="px-6 py-4 text-right">
                      <Link href={`/gqr/${gqr.id}`} passHref>
