@@ -6,9 +6,9 @@ export const GQRPrint = ({ gqrData, actualCalculations, estimatedCalculations, a
     return <div className="p-8 text-center">Loading print data...</div>;
   }
   
-  const totalWastage = (gqrData.rot_weight || 0) + (gqrData.doubles_weight || 0) + (gqrData.sand_weight || 0) + (gqrData.weight_shortage_weight || 0);
-  const finalRate = (gqrData.volatile_po_rate ?? gqrData.rate) ?? 0;
-  const finalWastage = (gqrData.volatile_wastage_kgs_per_ton ?? adjustableDamageAllowed) ?? 0;
+  const totalWastage = (gqrData.rot_weight || 0) + (gqrData.doubles_weight || 0) + (gqrData.sand_weight || 0) + (gqrData.weight_shortage_weight || gqrData.weight_shortage || 0);
+  const finalRate = gqrData.volatile_po_rate ?? gqrData.rate ?? 0;
+  const finalWastage = gqrData.volatile_wastage_kgs_per_ton ?? 0;
   const netWt = Number(actualCalculations?.totalCargo || 0);
 
   return (
@@ -60,11 +60,12 @@ export const GQRPrint = ({ gqrData, actualCalculations, estimatedCalculations, a
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px' }}>
             <span><strong>Item:</strong> {gqrData.item_name || 'N/A'}</span>
             <span><strong>Supplier:</strong> {gqrData.supplier_name}</span>
-            <span><strong>GR No:</strong> {gqrData.gr_no} / {formatDateDDMMYYYY(gqrData.gr_dt)}</span>
-            <span><strong>PO Rate:</strong> ₹{gqrData.rate?.toFixed(2) || '0.00'}</span>
+            <span><strong>PO Date:</strong> {gqrData.po_date ? formatDateDDMMYYYY(gqrData.po_date) : 'N/A'}</span>
+            <span><strong>PO Rate:</strong> ₹{gqrData.po_rate?.toFixed(2) || gqrData.rate?.toFixed(2) || '0.00'}</span>
             <span><strong>Podi Rate:</strong> ₹{gqrData.podi_rate?.toFixed(2) || '0.00'}</span>
+            <span><strong>PO Quantity:</strong> {gqrData.po_quantity || 0} MT</span>
             <span><strong>Wastage Allowed:</strong> {gqrData.damage_allowed_kgs_ton || 'N/A'} kgs/ton</span>
-            <span><strong>Assured Cargo:</strong> {gqrData.assured_cargo_percent || 'N/A'}%</span>
+            <span><strong>Assured Cargo:</strong> {gqrData.cargo || gqrData.assured_cargo_percent || 'N/A'}%</span>
           </div>
         </div>
         {/* Office Info */}
@@ -74,7 +75,7 @@ export const GQRPrint = ({ gqrData, actualCalculations, estimatedCalculations, a
             <span><strong>Supplier:</strong></span>
             <span>{gqrData.supplier_name || 'N/A'}</span>
             <span><strong>GR No:</strong></span>
-            <span>{gqrData.gr_no || 'N/A'}</span>
+            <span>{gqrData.gr_no} / {formatDateDDMMYYYY(gqrData.gr_dt)}</span>
             <span><strong>Final Rate:</strong></span>
             <span>₹{Number(finalRate).toFixed(2)}</span>
             <span><strong>Final Wastage:</strong></span>
@@ -105,7 +106,7 @@ export const GQRPrint = ({ gqrData, actualCalculations, estimatedCalculations, a
           <div><strong>ROT:</strong> {gqrData.rot_weight || 0}</div>
           <div><strong>Doubles:</strong> {gqrData.doubles_weight || 0}</div>
           <div><strong>Sand:</strong> {gqrData.sand_weight || 0}</div>
-          <div><strong>Weight Shortage:</strong> {gqrData.weight_shortage_weight || 0}</div>
+          <div><strong>Weight Shortage:</strong> {gqrData.weight_shortage_weight || gqrData.weight_shortage || 0}</div>
           <div><strong>Total Wastage:</strong> {totalWastage.toFixed(2)}</div>
         </div>
       </div>

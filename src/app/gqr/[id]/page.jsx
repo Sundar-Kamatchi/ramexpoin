@@ -89,12 +89,15 @@ export default function GQREditPage() {
             weight_shortage: directData.weight_shortage_weight,
             po_rate: directData.pre_gr_entry?.purchase_orders?.rate || 0,
             podi_rate: directData.pre_gr_entry?.purchase_orders?.podi_rate || 0,
+            volatile_po_rate: directData.volatile_po_rate,
+            volatile_wastage_kgs_per_ton: directData.volatile_wastage_kgs_per_ton,
             net_wt: (directData.pre_gr_entry?.ladden_wt || 0) - (directData.pre_gr_entry?.empty_wt || 0),
             gqr_id: directData.id,
             pre_gr_id: directData.pre_gr_entry?.id,
             
             // PO Details
             po_gr_no: directData.pre_gr_entry?.purchase_orders?.vouchernumber || '',
+            po_quantity: directData.pre_gr_entry?.purchase_orders?.quantity || 0,
             po_date: directData.pre_gr_entry?.purchase_orders?.date || '',
             supplier_name: directData.pre_gr_entry?.purchase_orders?.suppliers?.name || '',
             item_name: directData.pre_gr_entry?.purchase_orders?.item_master?.item_name || '',
@@ -110,6 +113,8 @@ export default function GQREditPage() {
             user_remark: directData.user_remark || ''
           };
           
+          console.log('GQR Detail: volatile_wastage_kgs_per_ton from DB:', directData.volatile_wastage_kgs_per_ton);
+          console.log('GQR Detail: volatile_wastage_kgs_per_ton in fetchedData:', fetchedData.volatile_wastage_kgs_per_ton);
           setGqrData(fetchedData);
           
           

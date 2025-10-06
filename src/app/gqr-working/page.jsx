@@ -230,7 +230,7 @@ export default function GQRWorkingPage() {
             if (preGr.po_id) {
               const { data: po, error: poError } = await supabase
                 .from('purchase_orders')
-                .select('id, vouchernumber, rate, podi_rate, supplier_id, item_id, cargo, damage_allowed_kgs_ton')
+                .select('id, vouchernumber, rate, podi_rate, supplier_id, item_id, cargo, damage_allowed_kgs_ton, quantity, date')
                 .eq('id', preGr.po_id)
                 .single();
 
@@ -302,6 +302,8 @@ export default function GQRWorkingPage() {
         console.log('GQR Working: Direct query result:', directData);
         console.log('GQR Working: Weight shortage from DB:', directData.weight_shortage_weight);
         console.log('GQR Working: Purchase order data:', directData.pre_gr_entry?.purchase_orders);
+        console.log('GQR Working: PO Quantity from DB:', directData.pre_gr_entry?.purchase_orders?.quantity);
+        console.log('GQR Working: PO Date from DB:', directData.pre_gr_entry?.purchase_orders?.date);
         
         // Transform the direct query result to match expected structure
         const gqr = {
@@ -338,6 +340,8 @@ export default function GQRWorkingPage() {
         
         console.log('GQR Working: Setting GQR data:', gqr);
         console.log('GQR Working: Weight shortage in final GQR data:', gqr.weight_shortage_weight);
+        console.log('GQR Working: PO Quantity in final GQR data:', gqr.po_quantity);
+        console.log('GQR Working: PO Date in final GQR data:', gqr.po_date);
         setGqrData(gqr);
         
         // Set actual values from GQR data
@@ -646,7 +650,7 @@ export default function GQRWorkingPage() {
                 <div><strong>Sand Weight:</strong> {gqrData.sand_weight || 0} kg</div>
                 <div><strong>Weight Shortage:</strong> {gqrData.weight_shortage_weight || 0} kg</div>
                  <div><strong>Total Wastage:</strong> {(gqrData.rot_weight || 0) + (gqrData.doubles_weight || 0) + (gqrData.sand_weight || 0) + (gqrData.weight_shortage_weight || 0)} kg</div>
-                 <div><strong>Cargo Received Date:</strong> {gqrData.pre_gr_date ? formatDateDDMMYYYY(gqrData.pre_gr_date) : 'N/A'}</div>
+                 <div><strong>Cargo Received Date:</strong> {gqrData.gr_dt ? formatDateDDMMYYYY(gqrData.gr_dt) : 'N/A'}</div>
               </div>
             </div>
 
@@ -721,9 +725,11 @@ export default function GQRWorkingPage() {
                 </table>
               </div>
               
-              {/* Adjustable Rates - Moved above Report for dynamic impact */}
+              {/* Adjustable/Finalized Rates - Moved above Report for dynamic impact */}
               <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg mb-6">
-                <h3 className="text-lg font-semibold">Adjustable Fields</h3>
+                <h3 className="text-lg font-semibold">
+                  {gqrData?.gqr_status === 'Closed' ? 'Finalized Fields' : 'Adjustable Fields'}
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="text-sm font-medium">

@@ -10,7 +10,7 @@ export const fetchGQRWithRelationships = async (gqrId) => {
     // Step 1: Fetch GQR entry
     const { data: gqrData, error: gqrError } = await supabase
       .from('gqr_entry')
-      .select('id, created_at, total_value_received, export_quality_weight, podi_weight, rot_weight, doubles_weight, sand_weight, gap_items_weight, weight_shortage_weight, gqr_status, pre_gr_id')
+      .select('id, created_at, total_value_received, export_quality_weight, podi_weight, rot_weight, doubles_weight, sand_weight, gap_items_weight, weight_shortage_weight, gqr_status, pre_gr_id, volatile_po_rate, volatile_podi_rate, volatile_wastage_kgs_per_ton')
       .eq('id', gqrId)
       .single();
 
