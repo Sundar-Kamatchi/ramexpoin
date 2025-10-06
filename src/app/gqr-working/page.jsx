@@ -90,7 +90,7 @@ export default function GQRWorkingPage() {
         .from('gqr_entry')
         .select('id, created_at, total_value_received, gqr_status, pre_gr_id')
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(25);
 
       if (gqrError) {
         console.error('GQR Working: Multiple fields query failed:', gqrError);
