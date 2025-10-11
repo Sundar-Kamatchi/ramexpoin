@@ -55,10 +55,10 @@ export default function GQRWorkingPage() {
   const fetchUnfinalizedGQRs = async () => {
     setLoading(true);
     try {
-      console.log('GQR Working: Testing basic Supabase connection...');
+      //console.log('GQR Working: Testing basic Supabase connection...');
       
       // Test 1: Try to fetch ANY data from gqr_entry table
-      console.log('GQR Working: Test 1 - Basic count query...');
+      //console.log('GQR Working: Test 1 - Basic count query...');
       const { count, error: countError } = await supabase
         .from('gqr_entry')
         .select('*', { count: 'exact', head: true });
@@ -90,7 +90,7 @@ export default function GQRWorkingPage() {
         .from('gqr_entry')
         .select('id, created_at, total_value_received, gqr_status, pre_gr_id')
         .order('created_at', { ascending: false })
-        .limit(25);
+        .limit(50);
 
       if (gqrError) {
         console.error('GQR Working: Multiple fields query failed:', gqrError);
@@ -187,7 +187,7 @@ export default function GQRWorkingPage() {
     if (!selectedGqr) return;
     
     try {
-      console.log('GQR Working: Fetching details for GQR ID:', selectedGqr);
+      //console.log('GQR Working: Fetching details for GQR ID:', selectedGqr);
       setLoading(true);
       
       // Fetch GQR data
