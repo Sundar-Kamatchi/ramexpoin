@@ -56,7 +56,7 @@ export default function GQRWorkingPage() {
     setLoading(true);
     try {
       //console.log('GQR Working: Testing basic Supabase connection...');
-      
+
       // Test 1: Try to fetch ANY data from gqr_entry table
       //console.log('GQR Working: Test 1 - Basic count query...');
       const { count, error: countError } = await supabase
@@ -104,7 +104,7 @@ export default function GQRWorkingPage() {
       for (const gqr of gqrData || []) {
         let preGrData = null;
         let supplierData = null;
-        
+
         // Fetch Pre-GR data if exists
         if (gqr.pre_gr_id) {
           try {
@@ -113,10 +113,10 @@ export default function GQRWorkingPage() {
               .select('id, gr_no, gr_dt, po_id')
               .eq('id', gqr.pre_gr_id)
               .single();
-            
+
             if (!preGrError && preGr) {
               preGrData = preGr;
-              
+
               // Fetch supplier data if PO exists
               if (preGr.po_id) {
                 try {
@@ -125,14 +125,14 @@ export default function GQRWorkingPage() {
                     .select('id, supplier_id')
                     .eq('id', preGr.po_id)
                     .single();
-                  
+
                   if (!poError && po && po.supplier_id) {
                     const { data: supplier, error: supplierError } = await supabase
                       .from('suppliers')
                       .select('id, name')
                       .eq('id', po.supplier_id)
                       .single();
-                    
+
                     if (!supplierError && supplier) {
                       supplierData = supplier;
                     }
@@ -146,7 +146,7 @@ export default function GQRWorkingPage() {
             console.warn('GQR Working: Pre-GR query failed for GQR', gqr.id, ':', preGrErr);
           }
         }
-        
+
         // Combine the data
         result.push({
           ...gqr,
@@ -163,7 +163,7 @@ export default function GQRWorkingPage() {
 
       setGqrList(result);
       console.log('GQR Working: Successfully loaded with test approach:', result.length, 'entries');
-      
+
     } catch (err) {
       console.error('GQR Working: Test approach failed:', err);
       setError('Failed to load GQRs: ' + err.message);
@@ -185,35 +185,35 @@ export default function GQRWorkingPage() {
 
   const fetchGQRDetails = async () => {
     if (!selectedGqr) return;
-    
+
     try {
       //console.log('GQR Working: Fetching details for GQR ID:', selectedGqr);
       setLoading(true);
-      
+
       // Fetch GQR data
       const { data: gqrData, error: gqrError } = await supabase
         .from('gqr_entry')
         .select('*')
         .eq('id', selectedGqr)
         .single();
-      
+
       if (gqrError) {
         console.error('GQR Working: GQR query failed:', gqrError);
         throw gqrError;
       }
-      
+
       if (!gqrData) {
         throw new Error('GQR not found');
       }
-      
+
       console.log('GQR Working: GQR data fetched:', gqrData);
-      
+
       // Fetch related data if pre_gr_id exists
       let preGrData = null;
       let supplierData = null;
       let itemData = null;
       let poData = null;
-      
+
       if (gqrData.pre_gr_id) {
         try {
           // Fetch Pre-GR data
@@ -269,7 +269,7 @@ export default function GQRWorkingPage() {
           console.warn('GQR Working: Related data fetch failed:', relatedErr);
         }
       }
-      
+
       // Create data structure with actual fetched data
       const directData = {
         ...gqrData,
@@ -298,84 +298,84 @@ export default function GQRWorkingPage() {
           }
         }
       };
-        
-        console.log('GQR Working: Direct query result:', directData);
-        console.log('GQR Working: Weight shortage from DB:', directData.weight_shortage_weight);
-        console.log('GQR Working: Purchase order data:', directData.pre_gr_entry?.purchase_orders);
-        console.log('GQR Working: PO Quantity from DB:', directData.pre_gr_entry?.purchase_orders?.quantity);
-        console.log('GQR Working: PO Date from DB:', directData.pre_gr_entry?.purchase_orders?.date);
-        
-        // Transform the direct query result to match expected structure
-        const gqr = {
-          id: directData.id,
-          created_at: directData.created_at,
-          total_value_received: directData.total_value_received,
-          export_quality_weight: directData.export_quality_weight || 0,
-          podi_weight: directData.podi_weight || 0,
-          rot_weight: directData.rot_weight || 0,
-          doubles_weight: directData.doubles_weight || 0,
-          sand_weight: directData.sand_weight || 0,
-          weight_shortage_weight: directData.weight_shortage_weight || 0,
-          gap_items_weight: directData.gap_items_weight || 0,
-          volatile_po_rate: directData.volatile_po_rate,
-          volatile_gap_item_rate: directData.volatile_gap_item_rate,
-          volatile_podi_rate: directData.volatile_podi_rate,
-          volatile_wastage_kgs_per_ton: directData.volatile_wastage_kgs_per_ton,
-          gqr_status: directData.gqr_status || 'Open',
-          rate: directData.pre_gr_entry?.purchase_orders?.rate || 0,
-          podi_rate: directData.pre_gr_entry?.purchase_orders?.podi_rate || 0,
-          po_quantity: directData.pre_gr_entry?.purchase_orders?.quantity || 0,
-          po_date: directData.pre_gr_entry?.purchase_orders?.date || directData.pre_gr_entry?.purchase_orders?.created_at,
-          vouchernumber: directData.pre_gr_entry?.purchase_orders?.vouchernumber,
-          pre_gr_entry_id: directData.pre_gr_entry?.id,
-          gr_no: directData.pre_gr_entry?.gr_no,
-          gr_dt: directData.pre_gr_entry?.gr_dt,
-          pre_gr_date: directData.pre_gr_entry?.date,
-          net_wt: directData.pre_gr_entry?.net_wt || ((directData.pre_gr_entry?.ladden_wt || 0) - (directData.pre_gr_entry?.empty_wt || 0)),
-          supplier_name: directData.pre_gr_entry?.purchase_orders?.suppliers?.name,
-          item_name: directData.pre_gr_entry?.purchase_orders?.item_master?.item_name,
-          assured_cargo_percent: directData.pre_gr_entry?.purchase_orders?.cargo || 'N/A',
-          damage_allowed_kgs_ton: directData.pre_gr_entry?.purchase_orders?.damage_allowed_kgs_ton || 'N/A'
-        };
-        
-        console.log('GQR Working: Setting GQR data:', gqr);
-        console.log('GQR Working: Weight shortage in final GQR data:', gqr.weight_shortage_weight);
-        console.log('GQR Working: PO Quantity in final GQR data:', gqr.po_quantity);
-        console.log('GQR Working: PO Date in final GQR data:', gqr.po_date);
-        setGqrData(gqr);
-        
-        // Set actual values from GQR data
-        setActualValues(prev => ({
-          ...prev,
-          cargoWeight: gqr.net_wt || 0,
-          podiWeight: gqr.podi_weight || 0,
-                      wastageWeight: (gqr.rot_weight || 0) + (gqr.doubles_weight || 0) + (gqr.sand_weight || 0) + (gqr.weight_shortage_weight || 0),
-          gapWeight: gqr.gap_items_weight || 0,
-          ratePerKg: gqr.volatile_po_rate || gqr.rate || 0,
-          podiRatePerKg: gqr.volatile_podi_rate || gqr.podi_rate || 0,
-                       gapRatePerKg: gqr.volatile_gap_item_rate || gqr.rate || 0,
-             wastageKgs: (gqr.rot_weight || 0) + (gqr.doubles_weight || 0) + (gqr.sand_weight || 0) + (gqr.weight_shortage_weight || 0),
-          rotWeight: gqr.rot_weight || 0,
-          doublesWeight: gqr.doubles_weight || 0,
-          sandWeight: gqr.sand_weight || 0,
-          weightShortage: gqr.weight_shortage_weight || 0,
-        }));
-        
-        // Set estimated values with PO rates and damage allowed kgs per ton from database
-        setEstimatedValues(prev => ({
-          ...prev,
-          ratePerKg: gqr.rate || 0,
-          podiRatePerKg: gqr.podi_rate || 0,
-          assuredCargoPercent: 80,
-          damageAllowedKgsPerTon: directData.pre_gr_entry?.purchase_orders?.damage_allowed_kgs_ton || 100,
-        }));
-        
-        // Set adjustable damage allowed value from PO or volatile field
-        const damageAllowed = gqr.volatile_wastage_kgs_per_ton || directData.pre_gr_entry?.purchase_orders?.damage_allowed_kgs_ton || 100;
-        console.log('GQR Working: Setting adjustable damage allowed from direct query:', damageAllowed);
-        setAdjustableDamageAllowed(damageAllowed);
-        
-        setLoading(false);
+
+      console.log('GQR Working: Direct query result:', directData);
+      console.log('GQR Working: Weight shortage from DB:', directData.weight_shortage_weight);
+      console.log('GQR Working: Purchase order data:', directData.pre_gr_entry?.purchase_orders);
+      console.log('GQR Working: PO Quantity from DB:', directData.pre_gr_entry?.purchase_orders?.quantity);
+      console.log('GQR Working: PO Date from DB:', directData.pre_gr_entry?.purchase_orders?.date);
+
+      // Transform the direct query result to match expected structure
+      const gqr = {
+        id: directData.id,
+        created_at: directData.created_at,
+        total_value_received: directData.total_value_received,
+        export_quality_weight: directData.export_quality_weight || 0,
+        podi_weight: directData.podi_weight || 0,
+        rot_weight: directData.rot_weight || 0,
+        doubles_weight: directData.doubles_weight || 0,
+        sand_weight: directData.sand_weight || 0,
+        weight_shortage_weight: directData.weight_shortage_weight || 0,
+        gap_items_weight: directData.gap_items_weight || 0,
+        volatile_po_rate: directData.volatile_po_rate,
+        volatile_gap_item_rate: directData.volatile_gap_item_rate,
+        volatile_podi_rate: directData.volatile_podi_rate,
+        volatile_wastage_kgs_per_ton: directData.volatile_wastage_kgs_per_ton,
+        gqr_status: directData.gqr_status || 'Open',
+        rate: directData.pre_gr_entry?.purchase_orders?.rate || 0,
+        podi_rate: directData.pre_gr_entry?.purchase_orders?.podi_rate || 0,
+        po_quantity: directData.pre_gr_entry?.purchase_orders?.quantity || 0,
+        po_date: directData.pre_gr_entry?.purchase_orders?.date || directData.pre_gr_entry?.purchase_orders?.created_at,
+        vouchernumber: directData.pre_gr_entry?.purchase_orders?.vouchernumber,
+        pre_gr_entry_id: directData.pre_gr_entry?.id,
+        gr_no: directData.pre_gr_entry?.gr_no,
+        gr_dt: directData.pre_gr_entry?.gr_dt,
+        pre_gr_date: directData.pre_gr_entry?.date,
+        net_wt: directData.pre_gr_entry?.net_wt || ((directData.pre_gr_entry?.ladden_wt || 0) - (directData.pre_gr_entry?.empty_wt || 0)),
+        supplier_name: directData.pre_gr_entry?.purchase_orders?.suppliers?.name,
+        item_name: directData.pre_gr_entry?.purchase_orders?.item_master?.item_name,
+        assured_cargo_percent: directData.pre_gr_entry?.purchase_orders?.cargo || 'N/A',
+        damage_allowed_kgs_ton: directData.pre_gr_entry?.purchase_orders?.damage_allowed_kgs_ton || 'N/A'
+      };
+
+      console.log('GQR Working: Setting GQR data:', gqr);
+      console.log('GQR Working: Weight shortage in final GQR data:', gqr.weight_shortage_weight);
+      console.log('GQR Working: PO Quantity in final GQR data:', gqr.po_quantity);
+      console.log('GQR Working: PO Date in final GQR data:', gqr.po_date);
+      setGqrData(gqr);
+
+      // Set actual values from GQR data
+      setActualValues(prev => ({
+        ...prev,
+        cargoWeight: gqr.net_wt || 0,
+        podiWeight: gqr.podi_weight || 0,
+        wastageWeight: (gqr.rot_weight || 0) + (gqr.doubles_weight || 0) + (gqr.sand_weight || 0) + (gqr.weight_shortage_weight || 0),
+        gapWeight: gqr.gap_items_weight || 0,
+        ratePerKg: gqr.volatile_po_rate || gqr.rate || 0,
+        podiRatePerKg: gqr.volatile_podi_rate || gqr.podi_rate || 0,
+        gapRatePerKg: gqr.volatile_gap_item_rate || gqr.rate || 0,
+        wastageKgs: (gqr.rot_weight || 0) + (gqr.doubles_weight || 0) + (gqr.sand_weight || 0) + (gqr.weight_shortage_weight || 0),
+        rotWeight: gqr.rot_weight || 0,
+        doublesWeight: gqr.doubles_weight || 0,
+        sandWeight: gqr.sand_weight || 0,
+        weightShortage: gqr.weight_shortage_weight || 0,
+      }));
+
+      // Set estimated values with PO rates and damage allowed kgs per ton from database
+      setEstimatedValues(prev => ({
+        ...prev,
+        ratePerKg: gqr.rate || 0,
+        podiRatePerKg: gqr.podi_rate || 0,
+        assuredCargoPercent: directData.pre_gr_entry?.purchase_orders?.cargo || 80,
+        damageAllowedKgsPerTon: directData.pre_gr_entry?.purchase_orders?.damage_allowed_kgs_ton || 100,
+      }));
+
+      // Set adjustable damage allowed value from PO or volatile field
+      const damageAllowed = gqr.volatile_wastage_kgs_per_ton || directData.pre_gr_entry?.purchase_orders?.damage_allowed_kgs_ton || 100;
+      console.log('GQR Working: Setting adjustable damage allowed from direct query:', damageAllowed);
+      setAdjustableDamageAllowed(damageAllowed);
+
+      setLoading(false);
     } catch (error) {
       console.error('GQR Working: Error fetching GQR details:', error);
       setError(error.message);
@@ -383,31 +383,30 @@ export default function GQRWorkingPage() {
     }
   };
 
-  // Calculate estimated values based on spreadsheet logic - HARDCODED VALUES
   const estimatedCalculations = useMemo(() => {
     const totalCargo = 20000; // HARDCODED: 20000 kg
-    const assuredCargoPercent = 0.80; // HARDCODED: 80%
+    const assuredCargoPercent = (estimatedValues.assuredCargoPercent || 80) / 100;
     const ratePerKg = estimatedValues.ratePerKg || gqrData?.rate || 10;
     const podiRatePerKg = estimatedValues.podiRatePerKg || gqrData?.podi_rate || 6;
     const wastageKgsPerTon = gqrData?.gqr_status === 'Closed' ? (gqrData?.volatile_wastage_kgs_per_ton || 100) : 100;
-    
+
     // Calculate total cargo value
     const totalCargoValue = totalCargo * ratePerKg;
-    
+
     // Calculate podi (20% of total cargo)
     const podiKgs = totalCargo * (1 - assuredCargoPercent);
     const podiValue = podiKgs * podiRatePerKg;
-    
+
     // Calculate wastage (kgs per ton * total cargo in tons)
     const wastageKgs = (wastageKgsPerTon * totalCargo) / 1000;
     const wastagePmt = wastageKgsPerTon * 20;
     const wastageValue = wastageKgs * ratePerKg;
-    
+
     // TOTAL CARGO AFTER PODI: Total cargo value minus podi value
     const totalCargoAfterPodiValue = totalCargoValue - podiValue;
     const totalCargoAfterPodiKgs = totalCargo - podiKgs;
     const totalCargoAfterPodiRate = totalCargoAfterPodiKgs > 0 ? totalCargoAfterPodiValue / totalCargoAfterPodiKgs : 0;
-    
+
     return {
       totalCargo,
       totalCargoValue,
@@ -485,7 +484,7 @@ export default function GQRWorkingPage() {
       // Save the current adjustable values to volatile fields
       const { error } = await supabase
         .from('gqr_entry')
-        .update({ 
+        .update({
           gqr_status: 'Closed',
           volatile_po_rate: actualValues.ratePerKg,
           volatile_podi_rate: actualValues.podiRatePerKg,
@@ -498,13 +497,13 @@ export default function GQRWorkingPage() {
       }
 
       toast.success('GQR finalized successfully!');
-      
+
       // Refresh the GQR data to reflect the closed status and volatile values
       await fetchGQRDetails();
-      
+
       // Refresh the unfinalized GQRs list
       await fetchUnfinalizedGQRs();
-      
+
     } catch (err) {
       console.error('Error finalizing GQR:', err);
       toast.error(`Failed to finalize GQR: ${err.message}`);
@@ -527,11 +526,11 @@ export default function GQRWorkingPage() {
     if (gqrData?.gqr_status === 'Closed') {
       const baseUrl = window.location.origin;
       const tallyUrl = `${baseUrl}/api/gqr-data/${gqrData.id}`;
-      
+
       // Copy URL to clipboard
       navigator.clipboard.writeText(tallyUrl).then(() => {
         toast.success('Tally URL copied to clipboard!');
-        
+
         // Show the URL in an alert for easy copying
         alert(`Tally URL copied to clipboard:\n\n${tallyUrl}\n\nUse this URL in your Tally TDL file to fetch GQR data.`);
       }).catch(() => {
@@ -547,7 +546,7 @@ export default function GQRWorkingPage() {
   const differences = useMemo(() => {
     // Calculate assured cargo kgs for actual (total cargo - podi - gap)
     const actualAssuredCargoKgs = actualCalculations.totalCargo - actualCalculations.podiKgs - actualCalculations.gapKgs;
-    
+
     return {
       totalRateAfterPodi: estimatedCalculations.totalRateAfterPodi - actualCalculations.totalRateAfterPodi,
       totalRateAfterPodiPayment: null,
@@ -649,15 +648,15 @@ export default function GQRWorkingPage() {
                 <div><strong>Doubles Weight:</strong> {gqrData.doubles_weight || 0} kg</div>
                 <div><strong>Sand Weight:</strong> {gqrData.sand_weight || 0} kg</div>
                 <div><strong>Weight Shortage:</strong> {gqrData.weight_shortage_weight || 0} kg</div>
-                 <div><strong>Total Wastage:</strong> {(gqrData.rot_weight || 0) + (gqrData.doubles_weight || 0) + (gqrData.sand_weight || 0) + (gqrData.weight_shortage_weight || 0)} kg</div>
-                 <div><strong>Cargo Received Date:</strong> {gqrData.gr_dt ? formatDateDDMMYYYY(gqrData.gr_dt) : 'N/A'}</div>
+                <div><strong>Total Wastage:</strong> {(gqrData.rot_weight || 0) + (gqrData.doubles_weight || 0) + (gqrData.sand_weight || 0) + (gqrData.weight_shortage_weight || 0)} kg</div>
+                <div><strong>Cargo Received Date:</strong> {gqrData.gr_dt ? formatDateDDMMYYYY(gqrData.gr_dt) : 'N/A'}</div>
               </div>
             </div>
 
             {/* Working Sheet - Estimated vs Actual */}
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
               <h2 className="text-xl font-semibold mb-4 border-b pb-2">Working Sheet</h2>
-              
+
               {/* Estimated vs Actual Comparison Table */}
               <div className="overflow-x-auto mb-6">
                 <table className="w-full border-collapse border border-gray-300 bg-blue-900 shadow-lg">
@@ -688,7 +687,7 @@ export default function GQRWorkingPage() {
                       <td className="border border-gray-300 p-2 text-right text-white bg-blue-500">{actualValues.ratePerKg}</td>
                       <td className="border border-gray-300 p-2 text-right text-white bg-blue-500">₹{actualCalculations.cargoValue.toFixed(2)}</td>
                     </tr>
-                    
+
                     {/* PODI & GAP ITEM KGS Row */}
                     <tr>
                       <td className="border border-gray-300 p-2 font-semibold text-white">PODI & GAP ITEM KGS</td>
@@ -699,7 +698,7 @@ export default function GQRWorkingPage() {
                       <td className="border border-gray-300 p-2 text-right text-white bg-blue-500">{actualValues.podiRatePerKg}</td>
                       <td className="border border-gray-300 p-2 text-right text-white bg-blue-500">₹{((actualCalculations.podiKgs + actualCalculations.gapKgs) * actualValues.podiRatePerKg).toFixed(2)}</td>
                     </tr>
-                    
+
                     {/* TOTAL CARGO AFTER PODI Row */}
                     <tr>
                       <td className="border border-gray-300 p-2 font-semibold text-white">TOTAL CARGO AFTER PODI</td>
@@ -709,8 +708,8 @@ export default function GQRWorkingPage() {
                       <td className="border border-gray-300 p-2 text-right text-white bg-blue-500">{actualCalculations.totalCargoAfterPodiAndGapKgs.toFixed(2)}</td>
                       <td className="border border-gray-300 p-2 text-right text-white bg-blue-500">{actualCalculations.totalCargoAfterPodiAndGapRate.toFixed(2)}</td>
                       <td className="border border-gray-300 p-2 text-right text-white bg-blue-500">₹{actualCalculations.totalCargoAfterPodiAndGapValue.toFixed(2)}</td>
-                    </tr>           
-                    
+                    </tr>
+
                     {/* WASTAGE KGS Row */}
                     <tr>
                       <td className="border border-gray-300 p-2 font-semibold text-white">WASTAGE KGS PMT ({adjustableDamageAllowed || 100} kg)</td>
@@ -724,7 +723,7 @@ export default function GQRWorkingPage() {
                   </tbody>
                 </table>
               </div>
-              
+
               {/* Adjustable/Finalized Rates - Moved above Report for dynamic impact */}
               <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg mb-6">
                 <h3 className="text-lg font-semibold">
@@ -738,10 +737,10 @@ export default function GQRWorkingPage() {
                         <span className="text-xs text-blue-600 ml-1">(Finalized: {gqrData.volatile_po_rate})</span>
                       )}
                     </label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       value={actualValues.ratePerKg || ''}
-                      onChange={(e) => setActualValues(prev => ({...prev, ratePerKg: parseFloat(e.target.value) || 0}))}
+                      onChange={(e) => setActualValues(prev => ({ ...prev, ratePerKg: parseFloat(e.target.value) || 0 }))}
                       className="w-full p-3 border rounded mt-1"
                       placeholder={gqrData.rate || 0}
                       disabled={gqrData?.gqr_status === 'Closed' || !isAdmin}
@@ -754,10 +753,10 @@ export default function GQRWorkingPage() {
                         <span className="text-xs text-blue-600 ml-1">(Finalized: {gqrData.volatile_podi_rate})</span>
                       )}
                     </label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       value={actualValues.podiRatePerKg || ''}
-                      onChange={(e) => setActualValues(prev => ({...prev, podiRatePerKg: parseFloat(e.target.value) || 0}))}
+                      onChange={(e) => setActualValues(prev => ({ ...prev, podiRatePerKg: parseFloat(e.target.value) || 0 }))}
                       className="w-full p-3 border rounded mt-1"
                       placeholder={gqrData.podi_rate || 0}
                       disabled={gqrData?.gqr_status === 'Closed' || !isAdmin}
@@ -770,8 +769,8 @@ export default function GQRWorkingPage() {
                         <span className="text-xs text-blue-600 ml-1">(Finalized: {gqrData.volatile_wastage_kgs_per_ton})</span>
                       )}
                     </label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       value={adjustableDamageAllowed || ''}
                       onChange={(e) => setAdjustableDamageAllowed(parseFloat(e.target.value) || 0)}
                       className="w-full p-3 border rounded"
@@ -812,7 +811,7 @@ export default function GQRWorkingPage() {
                         <td className="border border-gray-300 p-2 text-center text-white">₹{(estimatedCalculations.totalCargoAfterPodiRate - actualCalculations.totalCargoAfterPodiAndGapRate).toFixed(2)}</td>
                         <td className="border border-gray-300 p-2 text-center text-white">-</td>
                       </tr>
-                      
+
                       <tr>
                         <td className="border border-gray-300 p-2 font-semibold text-white">TOTAL RATE AFTER PODI & GAP ITEMS PMT</td>
                         <td className="border border-gray-300 p-2 text-center text-white">₹{(estimatedCalculations.totalCargoAfterPodiRate * 1000).toFixed(2)}</td>
@@ -820,7 +819,7 @@ export default function GQRWorkingPage() {
                         <td className="border border-gray-300 p-2 text-center text-white">₹{Math.round((estimatedCalculations.totalCargoAfterPodiRate * 1000) - (actualCalculations.totalCargoAfterPodiAndGapRate * 1000))}</td>
                         <td className="border border-gray-300 p-2 text-center text-white">₹{Math.round((actualCalculations.totalCargoAfterPodiAndGapKgs * ((estimatedCalculations.totalCargoAfterPodiRate * 1000) - (actualCalculations.totalCargoAfterPodiAndGapRate * 1000))) / 1000).toFixed(2)}</td>
                       </tr>
-                      
+
                       <tr>
                         <td className="border border-gray-300 p-2 font-semibold text-white">PODI & CARGO ITEMS %</td>
                         <td className="border border-gray-300 p-2 text-center text-white">{((estimatedCalculations.podiKgs / estimatedCalculations.totalCargo) * 100).toFixed(2)}%</td>
@@ -828,7 +827,7 @@ export default function GQRWorkingPage() {
                         <td className="border border-gray-300 p-2 text-center text-white">{(((estimatedCalculations.podiKgs / estimatedCalculations.totalCargo) * 100) - (((actualCalculations.podiKgs + actualCalculations.gapKgs) / actualCalculations.totalCargo) * 100)).toFixed(2)}%</td>
                         <td className="border border-gray-300 p-2 text-center text-white">-</td>
                       </tr>
-                      
+
                       <tr className="border-t-2 border-gray-400">
                         <td className="border border-gray-300 p-2 font-semibold text-white">WASTAGE KGS PMT</td>
                         <td className="border border-gray-300 p-2 text-center text-white">{adjustableDamageAllowed || 100}</td>
@@ -836,7 +835,7 @@ export default function GQRWorkingPage() {
                         <td className="border border-gray-300 p-2 text-center text-white">-{Math.abs(Math.round((adjustableDamageAllowed || 100) - (actualCalculations.totalCargo > 0 ? ((actualCalculations.wastageKgs / actualCalculations.totalCargo) * 1000) : 0)))}</td>
                         <td className="border border-gray-300 p-2 text-center text-white">₹{(Math.round((adjustableDamageAllowed || 100) - (actualCalculations.totalCargo > 0 ? ((actualCalculations.wastageKgs / actualCalculations.totalCargo) * 1000) : 0)) * (actualCalculations.totalCargo / 1000) * actualCalculations.totalCargoAfterPodiAndGapRate).toFixed(2)}</td>
                       </tr>
-                      
+
                       <tr>
                         <td className="border border-gray-300 p-2 font-semibold text-white">WASTAGE %</td>
                         <td className="border border-gray-300 p-2 text-center text-white">{((estimatedCalculations.wastageKgs / estimatedCalculations.totalCargo) * 100).toFixed(2)}%</td>
@@ -844,7 +843,7 @@ export default function GQRWorkingPage() {
                         <td className="border border-gray-300 p-2 text-center text-white">{(((estimatedCalculations.wastageKgs / estimatedCalculations.totalCargo) * 100) - ((actualCalculations.wastageKgs / actualCalculations.totalCargo) * 100)).toFixed(2)}%</td>
                         <td className="border border-gray-300 p-2 text-center text-white">-</td>
                       </tr>
-                      
+
                       {/* TOTAL Row */}
                       <tr className="border-t-4 border-gray-600">
                         <td className="border border-gray-300 p-2 font-bold text-center text-white">TOTAL</td>

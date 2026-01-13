@@ -20,10 +20,10 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let isMounted = true; // Track if component is still mounted
     let authStateChangeHandled = false; // Track if auth state change has been handled
-    
+
     console.log('AuthProvider: useEffect started');
     console.log('AuthProvider: About to call getInitialSession');
-    
+
     // Add a timeout to prevent infinite loading - increased to 10 seconds
     const loadingTimeout = setTimeout(() => {
       if (isMounted && loading) {
@@ -38,47 +38,61 @@ export function AuthProvider({ children }) {
       try {
         try {
           console.log('AuthProvider: Getting initial session...');
-          
+
+          // Debug SupabaseURL
+          console.log('AuthProvider: Supabase URL configured:', !!supabase.supabaseUrl);
+
+          // Create a timeout promise for the user check
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('getUser timeout')), 5000)
+          );
+
           // Wrap the getUser call in a try-catch to handle AuthSessionMissingError
           let initialUser = null;
           let sessionError = null;
-          
+
           try {
-            const { data: { user }, error } = await supabase.auth.getUser();
-            initialUser = user;
+            // Race getUser against timeout
+            const { data, error } = await Promise.race([
+              supabase.auth.getUser(),
+              timeoutPromise
+            ]);
+            initialUser = data.user;
             sessionError = error;
           } catch (authError) {
-            console.log('AuthProvider: Auth session missing, this is normal for unauthenticated users');
+            if (authError.message === 'getUser timeout') {
+              console.warn('AuthProvider: Session check timed out, assuming unauthenticated');
+            } else {
+              console.log('AuthProvider: Auth session missing/error, normal for guests:', authError.message);
+            }
             sessionError = authError;
           }
-          
+
           if (!isMounted) {
             console.log('AuthProvider: Component unmounted during initial session check');
             return;
           }
-          
+
           if (sessionError) {
-            console.log('AuthProvider: Session error:', sessionError.message);
+            console.log('AuthProvider: Session check result:', sessionError.message || 'No session');
             setUser(null);
             setIsAdmin(false);
           } else if (initialUser) {
-            console.log('AuthProvider: Initial user found:', initialUser.email, 'ID:', initialUser.id);
+            console.log('AuthProvider: Initial user found:', initialUser.email);
             setUser(initialUser);
-            
+
             // Check user profile for admin status
             try {
-              console.log('AuthProvider: Starting profile query for user ID:', initialUser.id);
+              // ... existing profile check code can stay or be optimized ...
+              // For brevity/robustness, we'll implement a simple version here
               const { data: profile, error } = await supabase
                 .from('user_profiles')
-                .select('*')
+                .select('role')
                 .eq('id', initialUser.id)
                 .single();
-              
-              if (!isMounted) {
-                console.log('AuthProvider: Component unmounted during initial profile check');
-                return;
-              }
-              
+
+              if (!isMounted) return;
+
               if (error) {
                 console.warn("AuthProvider: Could not fetch user profile:", error.message);
                 setIsAdmin(false);
@@ -91,7 +105,8 @@ export function AuthProvider({ children }) {
               setIsAdmin(false);
             }
           } else {
-            console.log('AuthProvider: No initial user found');
+            // Should not happen if error is null and user is null, but handle safe
+            console.log('AuthProvider: No initial user returned');
             setUser(null);
             setIsAdmin(false);
           }
@@ -101,11 +116,7 @@ export function AuthProvider({ children }) {
           setIsAdmin(false);
         }
       } catch (error) {
-        console.error("AuthProvider: Error getting initial user session:", error);
-        // Handle AuthSessionMissingError specifically
-        if (error.message && error.message.includes('Auth session missing')) {
-          console.log('AuthProvider: Auth session missing, this is normal for unauthenticated users');
-        }
+        console.error("AuthProvider: Critical error in session check:", error);
       } finally {
         // This is crucial: it runs regardless of success or failure
         if (isMounted) {
@@ -122,39 +133,39 @@ export function AuthProvider({ children }) {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('AuthProvider: Auth state changed:', event, session?.user?.email);
-        
+
         if (!isMounted) {
           console.log('AuthProvider: Component unmounted during auth state change');
           return;
         }
-        
+
         const currentUser = session?.user ?? null;
         setUser(currentUser);
 
         if (currentUser) {
           try {
             console.log('AuthProvider: Checking user profile on auth change for ID:', currentUser.id);
-            
+
             // Add a timeout to prevent hanging
             const profileQueryPromise = supabase
               .from('user_profiles')
               .select('*')
               .eq('id', currentUser.id)
               .single();
-            
+
             // Add a 3-second timeout
             const timeoutPromise = new Promise((_, reject) => {
               setTimeout(() => reject(new Error('Profile query timeout')), 3000);
             });
-            
+
             try {
               const { data: profile, error } = await Promise.race([profileQueryPromise, timeoutPromise]);
-              
+
               if (!isMounted) {
                 console.log('AuthProvider: Component unmounted during auth change profile check');
                 return;
               }
-              
+
               if (error) {
                 console.warn("AuthProvider: Could not fetch user profile on auth change:", error.message);
                 // Try to create profile if it doesn't exist
@@ -168,7 +179,7 @@ export function AuthProvider({ children }) {
                       full_name: currentUser.user_metadata?.full_name || currentUser.email,
                       role: 'staff'
                     });
-                  
+
                   if (insertError) {
                     console.error("AuthProvider: Failed to create user profile on auth change:", insertError.message);
                   } else {
@@ -184,7 +195,7 @@ export function AuthProvider({ children }) {
               }
             } catch (timeoutError) {
               console.warn("AuthProvider: Profile query timed out on auth change:", timeoutError.message);
-              
+
               // Fallback: Set admin based on email for now
               const isAdminUser = currentUser.email === 'admin@ramexpo.com';
               console.log('AuthProvider: FALLBACK - Setting isAdmin based on email:', isAdminUser);
@@ -198,7 +209,7 @@ export function AuthProvider({ children }) {
           console.log("AuthProvider: No user in session, setting isAdmin to false");
           setIsAdmin(false);
         }
-        
+
         // Ensure loading is false after any auth event
         if (isMounted) {
           console.log('AuthProvider: Setting loading to false after auth change');
