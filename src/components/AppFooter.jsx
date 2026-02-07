@@ -14,7 +14,13 @@ export default function AppFooter() {
             <div className="text-xs md:text-small font-sm text-green-900 dark:text-green-100">
                 &copy; 2025 developed by
             </div>
-            <Image src="/icon.ico" alt="" width={24} height={24} className="rounded-sm ml-1" />
+            <img
+                src="/icon.ico"
+                alt="Developer Logo"
+                width="24"
+                height="24"
+                className="rounded-sm ml-1 object-contain bg-white"
+            />
             <span className="text-xs md:text-small font-bold text-green-900 dark:text-green-100 ml-1">Apps S Technologies</span>
         </footer>
     );

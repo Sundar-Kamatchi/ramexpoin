@@ -11,5 +11,11 @@
     }
   ],
   "framework": "nextjs",
-  "buildCommand": "npm run build"
+  "buildCommand": "npm run build",
+  "crons": [
+    {
+      "path": "/api/cron/ping",
+      "schedule": "0 0 */5 * *"
+    }
+  ]
 }

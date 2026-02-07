@@ -37,31 +37,17 @@ export default function AppHeader() {
             fixed top-0 left-0 z-[1000] app-header
         ">
             <div className="flex items-center">
-                {/* Option 1: Fix the Next.js Image component */}
-                <div className="relative w-[70px] h-[70px] mr-3">
-                    <Link href="/">
-                        <Image 
-                            src="/ramlogo.png" 
-                            alt="Ramasamy Exim Logo" 
-                            fill
-                            className="rounded-lg object-contain cursor-pointer"
-                            sizes="70px"
-                            priority
-                        />
+                {/* Option 2: Using regular img tag for better reliability */}
+                <Link href="/">
+                    <img
+                        src="/ramlogo.png"
+                        alt="Ramasamy Exim Logo"
+                        width={70}
+                        height={70}
+                        className="rounded-lg mr-3 object-contain cursor-pointer"
+                    />
+                </Link>
 
-                    </Link>
-                </div>
-                
-                {/* Option 2: Alternative using regular img tag (uncomment if Image still doesn't work)
-                <img 
-                    src="/ramlogo.png" 
-                    alt="Ramasamy Exim Logo" 
-                    width={70} 
-                    height={70} 
-                    className="rounded-lg mr-3 object-contain" 
-                />
-                */}
-                
                 <div>
                     <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent border-transparent">
                         Ramasamy Export & Import Private Ltd
@@ -83,8 +69,8 @@ export default function AppHeader() {
                         <Menu className="h-5 w-5" />
                     </Button>
                 )}
-                
-                
+
+
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="primary" size="icon">
