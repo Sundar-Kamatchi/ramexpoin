@@ -12,7 +12,8 @@ export default function DeleteButton({
   isAdmin = false,
   className = "",
   variant = "destructive",
-  size = "sm"
+  size = "sm",
+  type = "button"
 }) {
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -80,6 +81,7 @@ export default function DeleteButton({
     <Button
       variant={variant}
       size={size}
+      type={type}
       onClick={handleDelete}
       disabled={isDeleting}
       className={className}

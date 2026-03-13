@@ -17,6 +17,7 @@ export default function CreatePreGRPage() {
     const router = useRouter();
     const { user, userProfile } = useAuth();
     const [loading, setLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
 
     // Data for dropdowns
     const [purchaseOrders, setPurchaseOrders] = useState([]);
@@ -392,7 +393,7 @@ export default function CreatePreGRPage() {
         }
 
         console.log('Form validation passed, starting submission...');
-        setLoading(true);
+        setSubmitting(true);
 
         try {
             const ladenTotal = toTotalKgs(ladenWtTons, ladenWtKgs);
@@ -471,8 +472,8 @@ export default function CreatePreGRPage() {
             console.error('CATCH BLOCK: Full error object:', error);
             toast.error('Failed to create Pre-GR entry: ' + (error.message || 'Unknown error'));
         } finally {
-            console.log('FINALLY BLOCK: Setting loading to false');
-            setLoading(false);
+            console.log('FINALLY BLOCK: Setting submitting to false');
+            setSubmitting(false);
         }
     };
 
@@ -953,7 +954,7 @@ export default function CreatePreGRPage() {
                         type="button"
                         variant="outline"
                         onClick={() => router.push('/pre-gr-list')}
-                        disabled={loading}
+                        disabled={submitting}
                     >
                         Cancel
                     </Button>
@@ -961,17 +962,17 @@ export default function CreatePreGRPage() {
                         type="button"
                         variant="outline"
                         onClick={resetForm}
-                        disabled={loading}
+                        disabled={submitting}
                     >
                         Reset
                     </Button>
                     <Button
                         type="submit"
                         variant="default"
-                        disabled={loading}
+                        disabled={submitting}
                         className="bg-green-600 hover:bg-green-700"
                     >
-                        {loading ? 'Creating...' : 'Create Pre-GR Entry'}
+                        {submitting ? 'Creating...' : 'Create Pre-GR Entry'}
                     </Button>
                 </div>
             </form>

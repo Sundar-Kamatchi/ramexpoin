@@ -401,16 +401,21 @@ export default function EditPurchaseOrderPage() {
               itemId={poId}
               itemName={`Purchase Order ${poId}`}
               onDelete={async (poId) => {
-                const { error } = await supabase
+                const { data, error } = await supabase
                   .from('purchase_orders')
                   .delete()
-                  .eq('id', poId);
+                  .eq('id', poId)
+                  .select();
                 if (error) throw error;
+                if (!data || data.length === 0) {
+                  throw new Error('Delete failed: no rows were removed. Check RLS policies or ensure the record exists.');
+                }
                 router.push('/po-list');
               }}
               isAdmin={isAdmin}
               variant="destructive"
               size="sm"
+              type="button"
             />
           </div>
           <div className="flex gap-4">
