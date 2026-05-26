@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export function middleware(request) {
+export function proxy(request) {
   const hasSession = request.cookies.getAll().some(
     cookie => cookie.name.startsWith('sb-') && cookie.name.endsWith('-auth-token')
   );
