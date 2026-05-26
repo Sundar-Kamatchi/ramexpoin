@@ -1,8 +1,6 @@
-// src/middleware.js
 import { NextResponse } from 'next/server';
 
 export function middleware(request) {
-  // Check for Supabase auth cookie directly — no network call, avoids Vercel middleware timeout
   const hasSession = request.cookies.getAll().some(
     cookie => cookie.name.startsWith('sb-') && cookie.name.endsWith('-auth-token')
   );
